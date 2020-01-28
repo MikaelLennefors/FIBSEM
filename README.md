@@ -16,6 +16,7 @@ Deep learning for segmentation of FIB-Sem volumetric image data
 
 ## Architectures
 - [ ] Unet
+    - How does the upsampling part increase the resolution in the output?
 - [ ] Simple as possible
 
 ## Optimisers
