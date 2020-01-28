@@ -21,7 +21,7 @@ Deep learning for segmentation of FIB-Sem volumetric image data
 
 ## Optimisers
 - [ ] Adam
-
+- [ ] Which loss function to use?
 ## Pre-trained weights
 
 ## Traning, validation and test split
