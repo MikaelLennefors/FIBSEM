@@ -16,7 +16,7 @@ Deep learning for segmentation of FIB-Sem volumetric image data
 
 ## Architectures
 - [ ] Unet
-    - How does the upsampling part increase the resolution in the output?
+    - How does the upsampling part increase the resolution in the output? Inverse convolution operation. Can be achived in multiple ways.
 - [ ] Simple as possible
 
 ## Optimisers
