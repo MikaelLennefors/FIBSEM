@@ -16,3 +16,5 @@ Medical data augmentation: http://www.mit.edu/~adalca/files/papers/cvpr2019_brai
 
 ## Upsampling
 https://machinelearningmastery.com/upsampling-and-transpose-convolution-layers-for-generative-adversarial-networks/
+
+https://arxiv.org/pdf/1603.07285.pdf
