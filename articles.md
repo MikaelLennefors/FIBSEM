@@ -17,6 +17,8 @@ Medical data augmentation: http://www.mit.edu/~adalca/files/papers/cvpr2019_brai
 
 Keras ImageDataGenerator: https://machinelearningmastery.com/how-to-configure-image-data-augmentation-when-training-deep-learning-neural-networks/
 
+https://link.springer.com/content/pdf/10.1186/s40537-019-0197-0.pdf
+
 ## Upsampling
 https://machinelearningmastery.com/upsampling-and-transpose-convolution-layers-for-generative-adversarial-networks/
 
