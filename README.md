@@ -2,10 +2,9 @@
 Deep learning for segmentation of FIB-Sem volumetric image data
 
 ## Preprocessing
-- [ ] Intensity gradient
-- [ ] ZCA whitening
-    - Is ZCA a preprocessing step, layer in network or data augmentation technique?
-- [ ] PCA
+- [ ] Intensity gradient (NO: hard to see if it actually exists)
+- [x] ZCA whitening
+- <s> PCA <s>
 - [ ] Mapp intensities to either 0 or 1
 
 ## Data augmentation
