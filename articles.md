@@ -8,6 +8,8 @@ MultiResUNet: https://reader.elsevier.com/reader/sd/pii/S0893608019302503?token=
 3D UNet: https://arxiv.org/pdf/1606.06650.pdf
 
 Non-local UNet: https://arxiv.org/pdf/1812.04103.pdf
+
+UNet++: https://arxiv.org/pdf/1912.05074.pdf
 ## Preprocessing
 ZCA: 
 http://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf
