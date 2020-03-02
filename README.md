@@ -21,6 +21,13 @@ Deep learning for segmentation of FIB-Sem volumetric image data
 - D-UNet
 - Non-local UNet
 
+## Network blocks
+- Batch Normilization or not
+- Different kinds of up sampling:
+  - UP-sampling (baseline)
+  - Inverse convolution (deconvolution)
+  - VoxelDCL
+
 ## Optimisers
 - Adam
 
