@@ -2,10 +2,10 @@
 Deep learning for segmentation of FIB-Sem volumetric image data
 
 ## Preprocessing
-- [ ] Intensity gradient (NO: hard to see if it actually exists)
-- [x] ZCA whitening
-- <s>PCA </s>
-- [ ] Mapp intensities to either 0 or 1
+- ZCA whitening
+- <s> Intensity gradient </s>(hard to see if it actually exists)
+- <s>PCA </s> (Use ZCA instead)
+- <s> Mapp intensities to either 0 or 1 </s>
 
 ## Data augmentation
 - [ ] Rotation
