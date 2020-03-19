@@ -1,3 +1,5 @@
+print("hi")
+
 import numpy as np
 import os
 import param
@@ -86,7 +88,7 @@ train_gen, val_img, val_mask, test_img, test_mask = gen_data_split(path_to_data 
         channels = channels, b_size = aug_batch, whitening_coeff = zca_coeff, maskgen_args = aug_args, grid_split = grid_split)
 
 for i in configurations:
-    
+
 
     # net_filters = int(i['net_filters'])
     # prop_elastic = i['prop_elastic']
@@ -112,8 +114,8 @@ for i in configurations:
     else:
         input_size = (256//(2**grid_split),channels)
         m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-        
-    #checkpoint = ModelCheckpoint(weights_path, monitor='val_iou_coef', 
+
+    #checkpoint = ModelCheckpoint(weights_path, monitor='val_iou_coef',
     #                             verbose=1, save_best_only=True, mode='max')
 
     #csv_logger = CSVLogger(log_path, append=True, separator=';')
@@ -122,7 +124,7 @@ for i in configurations:
 
     earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.001, patience = 100, mode = 'max')
     earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.5, patience = 30, mode = 'max')
-    class PredictionCallback(tf.keras.callbacks.Callback):    
+    class PredictionCallback(tf.keras.callbacks.Callback):
         def on_epoch_end(self, epoch, logs={}):
             testy_mask = np.around(self.model.predict(np.expand_dims(test_img[0], axis = 0)).reshape(256,256)).astype(np.uint8)*255
             print("\n--", np.max(testy_mask), "--")
@@ -170,7 +172,7 @@ for i in configurations:
                             x[j,:,:,k] = im_t
                             y[j] = im_mask_t
             y = np.around(y / 255.)
-            
+
             results = m.fit(x, y, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
@@ -178,7 +180,7 @@ for i in configurations:
             i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
             i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
             i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
-       
+
             count += 1
             print(max_count - count)
             if count >= max_count:
@@ -186,9 +188,9 @@ for i in configurations:
     else:
         for x, y in train_gen:
             x = np.array(x)
-            
+
             if elast_deform == True:
-                
+
                 for j in range(np.shape(x)[0]):
                     if random.random() < prop_elastic:
                         img = x[j]
