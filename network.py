@@ -56,9 +56,9 @@ elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
 elast_affine_alpha = 0.08
-net_filters = 32
-prop_elastic = 0.1
-net_lr = 1e-4
+net_filters = 64
+prop_elastic = 0.05
+net_lr = 7e-5
 net_bin_split = 0.3164
 net_drop = 0.5
 net_activ_fun = 1
@@ -124,11 +124,12 @@ for i in configurations:
     earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.5, patience = 30, mode = 'max')
     class PredictionCallback(tf.keras.callbacks.Callback):
         def on_epoch_end(self, epoch, logs={}):
-            testy_mask = np.around(self.model.predict(np.expand_dims(test_img[0], axis = 0)).reshape(256,256)).astype(np.uint8)*255
-            print("\n--", np.max(testy_mask), "--")
+            predic_mask = self.model.predict(np.expand_dims(test_img[0], axis = 0))
+            testy_mask = np.around(predic_mask).reshape(256,256).astype(np.uint8)*255
+
             #diff_mask = np.abs(testy_mask - y[i].reshape(256,256)).astype(np.uint8)*255
             im = Image.fromarray(testy_mask)
-            im.save(callback_path + 'pred_mask' + '_' + str(epoch).zfill(2) + '.png')
+            im.save(callback_path + 'pred_mask_' + str(epoch).zfill(2) + '.png')
             #im2.save(pred_path + 'diff_mask' + '_' + str(i).zfill(2) + '.png')
     #     im2 = Image.fromarray(diff_mask)
     #     #im3 = Image.fromarray(x[i].reshape(256,256).astype(np.uint8))
