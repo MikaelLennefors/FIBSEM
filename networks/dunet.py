@@ -28,21 +28,26 @@ def squeeze(x):
 
 def BN_block(filter_num, input, activation):
     x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
-    x = BatchNormalization()(x)
-    x1 = activation(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x1)
-    x = BatchNormalization()(x)
     x = activation(x)
+    x = BatchNormalization()(x)
+
+
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x)
+    x = activation(x)
+    x = BatchNormalization()(x)
+
     return x
 
 
 def BN_block3d(filter_num, input, activation):
     x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
-    x = BatchNormalization()(x)
-    x1 = activation(x)
-    x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x1)
-    x = BatchNormalization()(x)
     x = activation(x)
+    x = BatchNormalization()(x)
+
+    x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x)
+    x = activation(x)
+    x = BatchNormalization()(x)
+
     return x
 
 
@@ -207,7 +212,7 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, mul
     conv9 = BN_block(multiple, merge9, activation_fun)
     conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
     model = Model(inputs=inputs, outputs=conv10)
-    model.compile(optimizer = Adam(lr = learning_rate), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
+
     return model
 
 

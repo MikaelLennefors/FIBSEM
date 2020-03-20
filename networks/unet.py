@@ -58,8 +58,6 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
 
     model = Model(inputs = inputs, outputs = conv10)
 
-    model.compile(optimizer = Adam(lr = learning_rate), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
-
     if(pretrained_weights):
         model.load_weights(pretrained_weights)
 

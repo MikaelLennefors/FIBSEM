@@ -7,11 +7,13 @@ import tensorflow as tf
 from PIL import Image
 from tensorflow.keras.callbacks import *
 from tensorflow.keras.preprocessing.image import array_to_img
-
+from tensorflow.keras.optimizers import Adam, SGD
 sys.path.insert(1, './networks')
+import losses
 from unet import unet
 from dunet import D_Unet
 from multiresunet import MultiResUnet
+from nestnet import Nest_Net
 sys.path.insert(1, './processing')
 from elastic_deformation import elastic_transform
 from split_data import gen_data_split
@@ -58,7 +60,7 @@ elast_sigma = 0.08
 elast_affine_alpha = 0.08
 net_filters = 16
 prop_elastic = 0.05
-net_lr = 1e-2
+net_lr = 5e-3
 net_bin_split = 0.3164
 net_drop = 0.5
 net_activ_fun = 1
@@ -71,7 +73,7 @@ aug_args = dict(
             #zoom_range = 0.01,
             fill_mode = 'reflect'
         )
-zca_coeff = 5e-2
+zca_coeff = 1e-1
 with open('results/{}/results.txt'.format(gpu), 'w') as f:
         for key in configurations[0].keys():
             f.write('%s\t' % key)
@@ -107,12 +109,13 @@ for i in configurations:
 
     if channels == 1:
         input_size = 256//(2**grid_split)
-        m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
+        #m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
+        m = Nest_Net(256, 256, color_type=1, num_class=1, deep_supervision=False)
         #m = MultiResUnet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, bin_weight = net_bin_split, dout = net_drop)
     else:
         input_size = (256//(2**grid_split),channels)
         m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-
+    m.compile(optimizer = Adam(lr = net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
     #checkpoint = ModelCheckpoint(weights_path, monitor='val_iou_coef',
     #                             verbose=1, save_best_only=True, mode='max')
 
