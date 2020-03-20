@@ -26,10 +26,10 @@ def extract_data(path, channels, grid_split = 0):
     masks = np.array(masks).reshape((-1, 256, 256, 1))
 
     if channels > 1:
-        imgs = np.array(np.split(imgs, np.shape(imgs)[0]/channels))
+        imgs = np.array(np.split(imgs, np.shape(imgs)[0]/7))
         imgs = np.swapaxes(imgs,1,2)
         imgs = np.swapaxes(imgs,2,3)
-        
+
         if grid_split > 0:
             imgs = imgs.reshape(-1,(2**grid_split),256//(2**grid_split),(2**grid_split),256//(2**grid_split),channels,1)
             imgs = np.swapaxes(imgs, 2, 3)
@@ -45,10 +45,12 @@ def extract_data(path, channels, grid_split = 0):
             masks = masks.reshape((-1,(2**grid_split),256//(2**grid_split), (2**grid_split), 256//(2**grid_split),1))
             masks = np.swapaxes(masks, 2, 3)
             masks = masks.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), 1)
+    if channels == 3:
+        imgs = np.delete(imgs,[0,1,5,6], axis = 3)
+    elif channels == 5:
+        imgs = np.delete(imgs,[0,6], axis = 3)
 
 
-
-    
     return imgs, masks
 
 def gen_data_split(path_to_data = '../data/train_val_data/', path_to_test = '../data/test_data/', channels = 1, b_size = 180, whitening_coeff = 5e-3, maskgen_args = dict(vertical_flip = True), grid_split = 0):
@@ -82,7 +84,7 @@ def gen_data_split(path_to_data = '../data/train_val_data/', path_to_test = '../
 
     train_images, val_images, test_images = zca_whitening([train_images, val_images, test_images], whitening_coeff)
 
-    
+
     img_datagen = ImageDataGenerator(**maskgen_args)
     seed = 1
     mask_generator = img_datagen.flow(train_mask, batch_size=b_size, seed = seed)
@@ -93,9 +95,14 @@ def gen_data_split(path_to_data = '../data/train_val_data/', path_to_test = '../
         img_generator = []
         for i in range(channels):
             img_generator.append(img_datagen.flow(train_images[:,:,:,i,:], batch_size=b_size, seed = seed))
-        
-        train_generator = zip(img_generator[0], img_generator[1], img_generator[2], img_generator[3],
-            img_generator[4], img_generator[5], img_generator[6], mask_generator)
+        if channels == 7:
+            train_generator = zip(img_generator[0], img_generator[1], img_generator[2], img_generator[3],
+                img_generator[4], img_generator[5], img_generator[6], mask_generator)
+        elif channels == 5:
+            train_generator = zip(img_generator[0], img_generator[1], img_generator[2], img_generator[3],
+                img_generator[4], mask_generator)
+        elif channels == 3:
+            train_generator = zip(img_generator[0], img_generator[1], img_generator[2], mask_generator)
     return train_generator, val_images, val_mask, test_images, test_mask
 
 
@@ -114,7 +121,7 @@ if __name__ == '__main__':
     val_img = np.swapaxes(val_img,2,3)
     #test = test.reshape((60,16,64,64,7,1))
     val_img = val_img.reshape((960,64,64,7,1))
-    
+
     # for i in range(np.shape(val_img)[0]):
     #     for j in range(np.shape(val_img)[3]):
     #         plt.imshow(array_to_img(val_img[i,:,:,j]), cmap='gray', vmin=0,vmax =255)

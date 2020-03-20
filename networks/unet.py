@@ -9,8 +9,8 @@ import losses
 def conv_block_down(prev_layer, n_filters, activation):
     for i in range(2):
         conv = Conv2D(n_filters, 3, padding = 'same', kernel_initializer = 'he_normal')(prev_layer)
-        conv = BatchNormalization()(conv)
         prev_layer = activation(conv)
+        conv = BatchNormalization()(conv)
 
     return prev_layer
 
@@ -53,7 +53,7 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     up9 = conv_block_up(up8, conv1, multiple, activation_fun)
 
     conv9 = conv_block_down(up9, multiple, activation_fun)
-
+    conv9 = BatchNormalization()(conv9)
     conv10 = Conv2D(1, 1, activation = 'sigmoid')(conv9)
 
     model = Model(inputs = inputs, outputs = conv10)

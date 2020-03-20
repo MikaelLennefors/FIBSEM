@@ -9,26 +9,26 @@ import losses
 def conv2d_bn(x, filters, num_row, num_col, padding='same', strides=(1, 1), activation=None, name=None, dout = 0.5):
     '''
     2D Convolutional layers
-   
+
     Arguments:
         x {keras layer} -- input layer
         filters {int} -- number of filters
         num_row {int} -- number of rows in filters
         num_col {int} -- number of columns in filters
-   
+
     Keyword Arguments:
         padding {str} -- mode of padding (default: {'same'})
         strides {tuple} -- stride of convolution operation (default: {(1, 1)})
         activation {str} -- activation function (default: {'relu'})
         name {str} -- name of the layer (default: {None})
-   
+
     Returns:
         [keras layer] -- [output layer]
     '''
     #print("before")
     x = Conv2D(filters, (num_row, num_col), strides=strides, padding=padding, use_bias=False)(x)
     #x = Dropout(dout)(x)
-    # x = BatchNormalization(axis=3, scale=False, renorm = True)(x)
+    x = BatchNormalization(axis=3, scale=False, renorm = True)(x)
     #print("after")
     if(activation == None):
         return x
@@ -47,25 +47,25 @@ def conv2d_bn(x, filters, num_row, num_col, padding='same', strides=(1, 1), acti
 def trans_conv2d_bn(x, filters, num_row, num_col, padding='same', strides=(2, 2), name=None):
     '''
     2D Transposed Convolutional layers
-   
+
     Arguments:
         x {keras layer} -- input layer
         filters {int} -- number of filters
         num_row {int} -- number of rows in filters
         num_col {int} -- number of columns in filters
-   
+
     Keyword Arguments:
         padding {str} -- mode of padding (default: {'same'})
         strides {tuple} -- stride of convolution operation (default: {(2, 2)})
         name {str} -- name of the layer (default: {None})
-   
+
     Returns:
         [keras layer] -- [output layer]
     '''
 
     x = Conv2DTranspose(filters, (num_row, num_col), strides=strides, padding=padding)(x)
-    #x = BatchNormalization(axis=3, scale=False)(x)
-   
+    x = BatchNormalization(axis=3, scale=False)(x)
+
     return x
 
 
@@ -73,11 +73,11 @@ def MultiResBlock(U, inp, alpha = 1.67, act = 0,dout = 0.5):
 
     '''
     MultiRes Block
-   
+
     Arguments:
         U {int} -- Number of filters in a corrsponding UNet stage
         inp {keras layer} -- input layer
-   
+
     Returns:
         [keras layer] -- [output layer]
     '''
@@ -96,7 +96,7 @@ def MultiResBlock(U, inp, alpha = 1.67, act = 0,dout = 0.5):
     conv7x7 = conv2d_bn(conv5x5, int(W*0.5), 3, 3, activation = act, padding='same')
 
     out = concatenate([conv3x3, conv5x5, conv7x7], axis=3)
-    #out = BatchNormalization(axis=3)(out)
+    out = BatchNormalization(axis=3)(out)
 
     out = add([shortcut, out])
     if act == 0:
@@ -104,7 +104,7 @@ def MultiResBlock(U, inp, alpha = 1.67, act = 0,dout = 0.5):
     else:
         out = losses.RReLU()(out)
     #out = Dropout(dout)(out)
-    # out = BatchNormalization(axis=3, renorm = True)(out)
+    out = BatchNormalization(axis=3, renorm = True)(out)
 
     return out
 
@@ -112,12 +112,12 @@ def MultiResBlock(U, inp, alpha = 1.67, act = 0,dout = 0.5):
 def ResPath(filters, length, inp, act, dout = 0.5):
     '''
     ResPath
-   
+
     Arguments:
         filters {int} -- [description]
         length {int} -- length of ResPath
         inp {keras layer} -- input layer
-   
+
     Returns:
         [keras layer] -- [output layer]
     '''
@@ -134,7 +134,7 @@ def ResPath(filters, length, inp, act, dout = 0.5):
         out = relu(out)
     else:
         out = losses.RReLU()(out)
-    # out = BatchNormalization(axis=3, renorm = True)(out)
+    out = BatchNormalization(axis=3, renorm = True)(out)
     #out = Dropout(dout)(out)
 
     for i in range(length-1):
@@ -150,7 +150,7 @@ def ResPath(filters, length, inp, act, dout = 0.5):
             out = relu(out)
         else:
             out = losses.RReLU()(out)
-        # out = BatchNormalization(axis=3, renorm = True)(out)
+        out = BatchNormalization(axis=3, renorm = True)(out)
 
     return out
 
@@ -158,12 +158,12 @@ def ResPath(filters, length, inp, act, dout = 0.5):
 def MultiResUnet(input_size = 256, activation = 0, multiple = 32, learning_rate = 1e-4, bin_weight = 0.3, dout = 0.5):
     '''
     MultiResUNet
-   
+
     Arguments:
         height {int} -- height of image
         width {int} -- width of image
         n_channels {int} -- number of channels in image
-   
+
     Returns:
         [keras model] -- MultiResUNet model
     '''
@@ -209,11 +209,11 @@ def MultiResUnet(input_size = 256, activation = 0, multiple = 32, learning_rate 
     mresblock9 = MultiResBlock(multiple, up9, act = activation)
 
     conv10 = conv2d_bn(mresblock9, 1, 1, 1, activation='sigmoid')
-   
+
     model = Model(inputs=inputs, outputs=conv10)
     model.compile(optimizer = Adam(lr = learning_rate), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
     return model
-   
+
 
 
 def main():

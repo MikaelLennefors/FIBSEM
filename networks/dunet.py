@@ -28,20 +28,20 @@ def squeeze(x):
 
 def BN_block(filter_num, input, activation):
     x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
-    #x = BatchNormalization()(x)
+    x = BatchNormalization()(x)
     x1 = activation(x)
     x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x1)
-    #x = BatchNormalization()(x)
+    x = BatchNormalization()(x)
     x = activation(x)
     return x
 
 
 def BN_block3d(filter_num, input, activation):
     x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
-    #x = BatchNormalization()(x)
+    x = BatchNormalization()(x)
     x1 = activation(x)
     x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x1)
-    #x = BatchNormalization()(x)
+    x = BatchNormalization()(x)
     x = activation(x)
     return x
 
@@ -154,10 +154,10 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, mul
     pool3d1 = MaxPooling3D(pool_size=2)(conv3d1)
 
     conv3d2 = BN_block3d(2*multiple, pool3d1, activation_fun)
+    if input_size[1] != 3:
+        pool3d2 = MaxPooling3D(pool_size=2)(conv3d2)
 
-    pool3d2 = MaxPooling3D(pool_size=2)(conv3d2)
-
-    conv3d3 = BN_block3d(4*multiple, pool3d2, activation_fun)
+        conv3d3 = BN_block3d(4*multiple, pool3d2, activation_fun)
 
 
     conv1 = BN_block(multiple, input2d, activation_fun)
@@ -169,7 +169,7 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, mul
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
     conv3 = BN_block(4*multiple, pool2, activation_fun)
-    conv3 = D_SE_Add(4*multiple, conv3d3, conv3, activation_fun)
+    #conv3 = D_SE_Add(4*multiple, conv3d3, conv3, activation_fun)
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
     conv4 = BN_block(8*multiple, pool3, activation_fun)
@@ -363,8 +363,8 @@ def conv_bn_block(x, filter):
     return x
 
 def main():
-    
-    model = D_Unet()
+
+    model = D_Unet(input_size = (256,3))
     print(model.summary())
 
 if __name__ == '__main__':

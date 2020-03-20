@@ -23,7 +23,7 @@ while int(os.environ["CUDA_VISIBLE_DEVICES"]) not in [0,1]:
     os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
 
 channels = int(input("Choose channels, 1 or 7: "))
-while channels not in [1,7]:
+while channels not in [1,3,5,7]:
     channels = int(input("Choose channels, 1 or 7: "))
 
 gpu = 'V'
@@ -58,7 +58,7 @@ elast_sigma = 0.08
 elast_affine_alpha = 0.08
 net_filters = 32
 prop_elastic = 0.05
-net_lr = 1e-4
+net_lr = 1e-3
 net_bin_split = 0.3164
 net_drop = 0.5
 net_activ_fun = 1
@@ -148,9 +148,81 @@ for i in configurations:
 
     count = 0
 
-    if channels > 1:
+    if channels == 7:
         for x1, x2, x3, x4, x5, x6, x7, y in train_gen:
             x = np.stack((x1,x2,x3,x4,x5,x6,x7))
+            x = np.swapaxes(x,0,1)
+            x = np.swapaxes(x,1,2)
+            x = np.swapaxes(x,2,3)
+
+            if elast_deform == True:
+                for j in range(np.shape(x)[0]):
+                    if random.random() < prop_elastic:
+                        randoint = random.randint(0, 1e3)
+                        mask = y[j].copy()
+                        for k in range(channels):
+                            seed = np.random.RandomState(randoint)
+                            img = x[j,:,:,k]
+                            im_merge = np.concatenate((img, mask), axis=2)
+                            im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
+
+                            im_t = im_merge_t[...,0]
+                            im_mask_t = im_merge_t[...,1]
+                            x[j,:,:,k] = im_t
+                            y[j] = im_mask_t
+            y = np.around(y / 255.)
+
+            results = m.fit(x, y, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
+            i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
+            i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
+            i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
+            i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
+            i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
+
+            count += 1
+            print(max_count - count)
+            if count >= max_count:
+                break
+    elif channels == 5:
+        for x1, x2, x3, x4, x5, y in train_gen:
+            x = np.stack((x1,x2,x3,x4,x5))
+            x = np.swapaxes(x,0,1)
+            x = np.swapaxes(x,1,2)
+            x = np.swapaxes(x,2,3)
+
+            if elast_deform == True:
+                for j in range(np.shape(x)[0]):
+                    if random.random() < prop_elastic:
+                        randoint = random.randint(0, 1e3)
+                        mask = y[j].copy()
+                        for k in range(channels):
+                            seed = np.random.RandomState(randoint)
+                            img = x[j,:,:,k]
+                            im_merge = np.concatenate((img, mask), axis=2)
+                            im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
+
+                            im_t = im_merge_t[...,0]
+                            im_mask_t = im_merge_t[...,1]
+                            x[j,:,:,k] = im_t
+                            y[j] = im_mask_t
+            y = np.around(y / 255.)
+
+            results = m.fit(x, y, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
+            i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
+            i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
+            i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
+            i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
+            i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
+
+            count += 1
+            print(max_count - count)
+            if count >= max_count:
+                break
+    elif channels == 3:
+        for x1, x2, x3, y in train_gen:
+            x = np.stack((x1,x2,x3))
             x = np.swapaxes(x,0,1)
             x = np.swapaxes(x,1,2)
             x = np.swapaxes(x,2,3)
