@@ -27,62 +27,62 @@ def squeeze(x):
 
 
 def BN_block(filter_num, input, activation):
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(input)
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
     x = BatchNormalization()(x)
     x1 = activation(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x1)
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x1)
     x = BatchNormalization()(x)
     x = activation(x)
     return x
 
 
 def BN_block3d(filter_num, input, activation):
-    x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(input)
+    x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
     x = BatchNormalization()(x)
     x1 = activation(x)
-    x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x1)
+    x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x1)
     x = BatchNormalization()(x)
     x = activation(x)
     return x
 
 
 def D_Add(filter_num, input3d, input2d, activation):
-    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(input3d)
+    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal')(input3d)
     x = Lambda(squeeze)(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     x = Add()([x, input2d])
     return x
 
 
 def D_concat(filter_num, input3d, input2d, activation):
-    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(input3d)
+    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal')(input3d)
     x = Lambda(squeeze)(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     x = Concatenate()([x, input2d])
-    x = Conv2D(filter_num, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 1, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     return x
 
 
 def D_SE_concat(filter_num, input3d, input2d, activation):
-    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(input3d)
+    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal')(input3d)
     x = Lambda(squeeze)(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     x = squeeze_excite_block(x, activation)
     input2d = squeeze_excite_block(input2d, activation)
     x = Concatenate()([x, input2d])
-    x = Conv2D(filter_num, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 1, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     return x
 
 
 def D_Add_SE(filter_num, input3d, input2d, activation):
-    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(input3d)
+    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal')(input3d)
     x = Lambda(squeeze)(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     x = Add()([x, input2d])
     x = squeeze_excite_block(x, activation)
@@ -90,9 +90,9 @@ def D_Add_SE(filter_num, input3d, input2d, activation):
 
 
 def D_SE_Add(filter_num, input3d, input2d, activation):
-    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(input3d)
+    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal')(input3d)
     x = Lambda(squeeze)(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     x = squeeze_excite_block(x, activation)
     input2d = squeeze_excite_block(input2d, activation)
@@ -102,13 +102,13 @@ def D_SE_Add(filter_num, input3d, input2d, activation):
 
 
 def D_concat_SE(filter_num, input3d, input2d, activation):
-    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(input3d)
+    x = Conv3D(1, 1, padding='same', kernel_initializer='he_normal')(input3d)
     x = Lambda(squeeze)(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     x = Concatenate()([x, input2d])
     x = squeeze_excite_block(x, activation)
-    x = Conv2D(filter_num, 1, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Conv2D(filter_num, 1, padding='same', kernel_initializer='he_normal')(x)
     x = activation(x)
     return x
 
@@ -139,7 +139,7 @@ def squeeze_excite_block(input, activation, ratio=16):
     return x
 
 
-def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, multiple = 64, learning_rate = 1e-4, dout = 0.5):
+def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, multiple = 64, learning_rate = 1e-4, dout = 0.5, reg_coeff = 0.001):
     K.clear_session()
 
     if activation == 0:
@@ -151,7 +151,7 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, mul
     input2d = Lambda(squeeze)(inputs)
     conv3d1 = BN_block3d(multiple, inputs, activation_fun)
 
-    pool3d1 = MaxPooling3D(pool_size=2)(conv3d1)
+    pool3d1 = AveragePooling3D(pool_size=2)(conv3d1)
 
     conv3d2 = BN_block3d(2*multiple, pool3d1, activation_fun)
     if input_size[1] != 3:
@@ -179,25 +179,25 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, mul
     conv5 = BN_block(16*multiple, pool4, activation_fun)
     conv5 = Dropout(dout)(conv5)
 
-    up6 = Conv2D(8*multiple, 2, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(
+    up6 = Conv2D(8*multiple, 2, padding='same', kernel_initializer='he_normal')(
         UpSampling2D(size=(2, 2))(conv5))
     up6 = activation_fun(up6)
     merge6 = Concatenate()([conv4, up6])
     conv6 = BN_block(8*multiple, merge6, activation_fun)
 
-    up7 = Conv2D(4*multiple, 2, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(
+    up7 = Conv2D(4*multiple, 2, padding='same', kernel_initializer='he_normal')(
         UpSampling2D(size=(2, 2))(conv6))
     up7 = activation_fun(up7)
     merge7 = Concatenate()([conv3, up7])
     conv7 = BN_block(4*multiple, merge7, activation_fun)
 
-    up8 = Conv2D(2*multiple, 2, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(
+    up8 = Conv2D(2*multiple, 2, padding='same', kernel_initializer='he_normal')(
         UpSampling2D(size=(2, 2))(conv7))
     up8 = activation_fun(up8)
     merge8 = Concatenate()([conv2, up8])
     conv8 = BN_block(2*multiple, merge8, activation_fun)
 
-    up9 = Conv2D(multiple, 2, padding='same', kernel_initializer='he_normal', kernel_regularizer=tf.keras.regularizers.l2(0.01))(
+    up9 = Conv2D(multiple, 2, padding='same', kernel_initializer='he_normal')(
         UpSampling2D(size=(2, 2))(conv8))
     up9 = activation_fun(up9)
     merge9 = Concatenate()([conv1, up9])
