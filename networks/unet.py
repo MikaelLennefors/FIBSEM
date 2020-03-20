@@ -41,7 +41,8 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
     conv4 = conv_block_down(pool3, 8*multiple, activation_fun)
-    pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+    drop4 = Dropout(dout)(conv4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
 
     conv5 = conv_block_down(pool4, 16*multiple, activation_fun)
     drop5 = Dropout(dout)(conv5)
