@@ -13,7 +13,7 @@ import losses
 from unet import unet
 from dunet import D_Unet
 from multiresunet import MultiResUnet
-from nestnet import Nest_Net
+from nestnet import Nest_Net, bce_dice_loss
 sys.path.insert(1, './processing')
 from elastic_deformation import elastic_transform
 from split_data import gen_data_split
@@ -53,14 +53,14 @@ grid_split = 0
 NO_OF_EPOCHS = 50
 aug_batch = 180
 max_count = 3
-b_size = 32
+b_size = 1
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
 elast_affine_alpha = 0.08
-net_filters = 16
+net_filters = 32
 prop_elastic = 0.05
-net_lr = 5e-3
+net_lr = 2e-4
 net_bin_split = 0.3164
 net_drop = 0.5
 net_activ_fun = 1
@@ -73,7 +73,7 @@ aug_args = dict(
             #zoom_range = 0.01,
             fill_mode = 'reflect'
         )
-zca_coeff = 1e-1
+zca_coeff = 5e-2
 with open('results/{}/results.txt'.format(gpu), 'w') as f:
         for key in configurations[0].keys():
             f.write('%s\t' % key)
@@ -115,7 +115,7 @@ for i in configurations:
     else:
         input_size = (256//(2**grid_split),channels)
         m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-    m.compile(optimizer = Adam(lr = net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
+    m.compile(optimizer = Adam(lr = net_lr), loss = bce_dice_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
     #checkpoint = ModelCheckpoint(weights_path, monitor='val_iou_coef',
     #                             verbose=1, save_best_only=True, mode='max')
 
