@@ -161,15 +161,18 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, mul
 
 
     conv1 = BN_block(multiple, input2d, activation_fun)
-    #conv1 = D_Add(32, conv3d1, conv1)
+
+    #conv1 = D_Add(32, conv3d1, conv1, activation_fun)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
     conv2 = BN_block(2*multiple, pool1, activation_fun)
-    conv2 = D_SE_Add(2*multiple, conv3d2, conv2, activation_fun)
+    if input_size[1] > 3:
+        conv2 = D_SE_Add(2*multiple, conv3d2, conv2, activation_fun)
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
     conv3 = BN_block(4*multiple, pool2, activation_fun)
-    #conv3 = D_SE_Add(4*multiple, conv3d3, conv3, activation_fun)
+    if input_size[1] > 3:
+        conv3 = D_SE_Add(4*multiple, conv3d3, conv3, activation_fun)
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
     conv4 = BN_block(8*multiple, pool3, activation_fun)
