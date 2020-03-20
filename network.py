@@ -22,9 +22,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
 while int(os.environ["CUDA_VISIBLE_DEVICES"]) not in [0,1]:
     os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
 
-channels = int(input("Choose channels, 1 or 7: "))
+channels = int(input("Choose channels, 1, 3, 5 or 7: "))
 while channels not in [1,3,5,7]:
-    channels = int(input("Choose channels, 1 or 7: "))
+    channels = int(input("Choose channels, 1, 3, 5 or 7: "))
+    print('Prruuuuuutttttt')
 
 gpu = 'V'
 if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
@@ -48,17 +49,17 @@ configurations = [params.generate_hyperparameters() for _ in range(10000)]
 grid_split = 0
 
 
-NO_OF_EPOCHS = 400
+NO_OF_EPOCHS = 50
 aug_batch = 180
 max_count = 3
-b_size = 8
+b_size = 32
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
 elast_affine_alpha = 0.08
-net_filters = 32
+net_filters = 16
 prop_elastic = 0.05
-net_lr = 1e-3
+net_lr = 1e-2
 net_bin_split = 0.3164
 net_drop = 0.5
 net_activ_fun = 1
