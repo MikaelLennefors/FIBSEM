@@ -25,7 +25,6 @@ while int(os.environ["CUDA_VISIBLE_DEVICES"]) not in [0,1]:
 channels = int(input("Choose channels, 1, 3, 5 or 7: "))
 while channels not in [1,3,5,7]:
     channels = int(input("Choose channels, 1, 3, 5 or 7: "))
-    print('Prruuuuuutttttt')
 
 gpu = 'V'
 if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
