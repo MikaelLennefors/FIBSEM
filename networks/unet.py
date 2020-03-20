@@ -8,8 +8,8 @@ import losses
 
 def conv_block_down(prev_layer, n_filters, activation):
     for i in range(2):
-        conv = Conv2D(n_filters, 3, kernel_constraint = max_norm(3), padding = 'same', kernel_initializer = 'he_normal')(prev_layer)
-
+        conv = Conv2D(n_filters, 3, padding = 'same', kernel_initializer = 'he_normal')(prev_layer)
+        conv = BatchNormalization()(conv)
         prev_layer = activation(conv)
 
     return prev_layer
@@ -41,13 +41,13 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
     conv4 = conv_block_down(pool3, 8*multiple, activation_fun)
-    drop4 = Dropout(dout)(conv4)
-    pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
+    #drop4 = Dropout(dout)(conv4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 
     conv5 = conv_block_down(pool4, 16*multiple, activation_fun)
-    drop5 = Dropout(dout)(conv5)
+    #drop5 = Dropout(dout)(conv5)
 
-    up6 = conv_block_up(drop5, drop4, 8*multiple, activation_fun)
+    up6 = conv_block_up(conv5, conv4, 8*multiple, activation_fun)
     up7 = conv_block_up(up6, conv3, 4*multiple, activation_fun)
     up8 = conv_block_up(up7, conv2, 2*multiple, activation_fun)
     up9 = conv_block_up(up8, conv1, multiple, activation_fun)

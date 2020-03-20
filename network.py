@@ -51,14 +51,14 @@ grid_split = 0
 NO_OF_EPOCHS = 400
 aug_batch = 180
 max_count = 3
-b_size = 1
+b_size = 16
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
 elast_affine_alpha = 0.08
-net_filters = 64
+net_filters = 32
 prop_elastic = 0.05
-net_lr = 7e-5
+net_lr = 1e-4
 net_bin_split = 0.3164
 net_drop = 0.5
 net_activ_fun = 1
@@ -129,7 +129,7 @@ for i in configurations:
 
             #diff_mask = np.abs(testy_mask - y[i].reshape(256,256)).astype(np.uint8)*255
             im = Image.fromarray(testy_mask)
-            im.save(callback_path + 'pred_mask_' + str(epoch).zfill(2) + '.png')
+            im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
             #im2.save(pred_path + 'diff_mask' + '_' + str(i).zfill(2) + '.png')
     #     im2 = Image.fromarray(diff_mask)
     #     #im3 = Image.fromarray(x[i].reshape(256,256).astype(np.uint8))
