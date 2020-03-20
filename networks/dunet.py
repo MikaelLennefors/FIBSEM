@@ -151,7 +151,7 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, mul
     input2d = Lambda(squeeze)(inputs)
     conv3d1 = BN_block3d(multiple, inputs, activation_fun)
 
-    pool3d1 = AveragePooling3D(pool_size=2)(conv3d1)
+    pool3d1 = MaxPooling3D(pool_size=2)(conv3d1)
 
     conv3d2 = BN_block3d(2*multiple, pool3d1, activation_fun)
     if input_size[1] != 3:
