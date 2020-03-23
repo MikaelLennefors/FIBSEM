@@ -1,6 +1,8 @@
 # FIBSEM
 Deep learning for segmentation of FIB-Sem volumetric image data
 
+Teständring för att se om jag kan puscha från min dator.
+
 ## Preprocessing
 - ZCA whitening
 - <s> Intensity gradient </s>(hard to see if it actually exists)
