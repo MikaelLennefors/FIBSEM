@@ -10,8 +10,10 @@ MultiResUNet: https://reader.elsevier.com/reader/sd/pii/S0893608019302503?token=
 Non-local UNet: https://arxiv.org/pdf/1812.04103.pdf
 
 UNet++: https://arxiv.org/pdf/1912.05074.pdf
+
+D-Unet: https://arxiv.org/pdf/1908.05104.pdf
 ## Preprocessing
-ZCA: 
+ZCA:
 http://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf
 https://stats.stackexchange.com/questions/117427/what-is-the-difference-between-zca-whitening-and-pca-whitening
 http://ufldl.stanford.edu/tutorial/unsupervised/PCAWhitening/
