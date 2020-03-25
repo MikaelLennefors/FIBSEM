@@ -158,7 +158,7 @@ def wU_Net(img_rows, img_cols, color_type=1, num_class=1):
 Standard UNet++ [Zhou et.al, 2018]
 Total params: 9,041,601
 """
-def Nest_Net(img_rows, img_cols, color_type=1, num_class=1, deep_supervision=False):
+def Nest_Net(img_shape, color_type=1, num_class=1, deep_supervision=False):
 
     nb_filter = [32,64,128,256,512]
     act = 'elu'
@@ -166,7 +166,7 @@ def Nest_Net(img_rows, img_cols, color_type=1, num_class=1, deep_supervision=Fal
     # Handle Dimension Ordering for different backends
     global bn_axis
     bn_axis = 3
-    img_input = Input(shape=(img_rows, img_cols, color_type), name='main_input')
+    img_input = Input(shape=(img_shape, img_shape, color_type), name='main_input')
 
     conv1_1 = standard_unit(img_input, stage='11', nb_filter=nb_filter[0])
     pool1 = MaxPooling2D((2, 2), strides=(2, 2), name='pool1')(conv1_1)

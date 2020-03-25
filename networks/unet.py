@@ -10,7 +10,7 @@ def conv_block_down(prev_layer, n_filters, activation):
     for i in range(2):
         conv = Conv2D(n_filters, 3, padding = 'same', kernel_initializer = 'he_normal')(prev_layer)
         prev_layer = activation(conv)
-        conv = BatchNormalization()(conv)
+        prev_layer = BatchNormalization()(prev_layer)
 
     return prev_layer
 
@@ -31,7 +31,13 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
        activation_fun = losses.RReLU()
 
     inputs = Input((input_size, input_size, 1))
-    conv1 = conv_block_down(inputs, multiple, activation_fun)
+
+    in_0 = inputs
+    # if input_size == 258:
+    #     in_0 = Conv2D(multiple, 3, padding = 'valid', kernel_initializer = 'he_normal')(in_0)
+    #     prev_layer = activation(in_0)
+    #     in_0 = BatchNormalization()(in_0)
+    conv1 = conv_block_down(in_0, multiple, activation_fun)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
     conv2 = conv_block_down(pool1, 2*multiple, activation_fun)
@@ -65,7 +71,7 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
 
 def main():
 
-    model = unet()
+    model = unet(input_size = 258)
     print(model.summary())
 
 if __name__ == '__main__':

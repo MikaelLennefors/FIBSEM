@@ -32,12 +32,12 @@ gpu = 'V'
 if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
     gpu = 'Xp'
 
-if channels > 1:
-    data_path = './data/train_val_data_raw/'
-    test_path = './data/test_data_raw/'
-else:
-    data_path = './data/train_val_data/'
-    test_path = './data/test_data/'
+#if channels > 1:
+data_path = './data/train_val_data_raw/'
+test_path = './data/test_data_raw/'
+#else:
+#    data_path = './data/train_val_data/'
+#    test_path = './data/test_data/'
 log_path = './results/{}/log.out'.format(gpu)
 weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
@@ -53,7 +53,7 @@ grid_split = 0
 NO_OF_EPOCHS = 50
 aug_batch = 180
 max_count = 3
-b_size = 1
+b_size = 32
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
@@ -64,6 +64,7 @@ net_lr = 2e-4
 net_bin_split = 0.3164
 net_drop = 0.5
 net_activ_fun = 1
+
 
 aug_args = dict(
             vertical_flip = True,
@@ -106,14 +107,15 @@ for i in configurations:
 
     # conf_name = 'logs/{}_{}_{:.2e}_{:.2f}_{}_{:.2f}_{:.2f}_{}'.format(channels, net_filters, net_lr, net_bin_split, net_activ_fun,
     #     net_drop, prop_elastic, datetime.now().strftime('%m-%d_%H:%M:%S'))
-
+    #print(np.shape(val_img))
+    #raise
     if channels == 1:
-        input_size = 256//(2**grid_split)
-        #m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-        m = Nest_Net(256, 256, color_type=1, num_class=1, deep_supervision=False)
+        input_size = np.shape(val_img)[1]//(2**grid_split)
+        m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
+        #m = Nest_Net(input_size, color_type=1, num_class=1, deep_supervision=False)
         #m = MultiResUnet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, bin_weight = net_bin_split, dout = net_drop)
     else:
-        input_size = (256//(2**grid_split),channels)
+        input_size = (np.shape(val_img)[1]//(2**grid_split),channels)
         m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
     m.compile(optimizer = Adam(lr = net_lr), loss = bce_dice_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
     #checkpoint = ModelCheckpoint(weights_path, monitor='val_iou_coef',

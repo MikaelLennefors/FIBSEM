@@ -18,11 +18,22 @@ def extract_data(path, channels, grid_split = 0):
     for file_name in og_dir:
         img = Image.open(path + file_name)
         if 'image' in file_name:
-            imgs.append(img.getdata())
+            if channels != 1:
+                imgs.append(img.getdata())
+            else:
+                if (int(file_name[-7:-4]) % 7) == 3:
+                    imgs.append(img.getdata())
+
         elif 'mask' in file_name:
             masks.append(img.getdata())
 
-    imgs = np.array(imgs).reshape((-1, 256, 256, 1)).astype('float32')
+    if np.shape(imgs)[1] // 256 == 256:
+        imgs_shape = 256
+    elif np.shape(imgs)[1] // 258 == 258:
+        imgs_shape = 258
+    else:
+        raise
+    imgs = np.array(imgs).reshape((-1, imgs_shape, imgs_shape, 1)).astype('float32')
     masks = np.array(masks).reshape((-1, 256, 256, 1))
 
     if channels > 1:
@@ -31,17 +42,17 @@ def extract_data(path, channels, grid_split = 0):
         imgs = np.swapaxes(imgs,2,3)
 
         if grid_split > 0:
-            imgs = imgs.reshape(-1,(2**grid_split),256//(2**grid_split),(2**grid_split),256//(2**grid_split),channels,1)
+            imgs = imgs.reshape(-1,(2**grid_split),imgs_shape//(2**grid_split),(2**grid_split),imgs_shape//(2**grid_split),channels,1)
             imgs = np.swapaxes(imgs, 2, 3)
-            imgs = imgs.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), channels, 1)
+            imgs = imgs.reshape(-1, imgs_shape//(2**grid_split), imgs_shape//(2**grid_split), channels, 1)
             masks = masks.reshape((-1,(2**grid_split),256//(2**grid_split), (2**grid_split), 256//(2**grid_split),1))
             masks = np.swapaxes(masks, 2, 3)
             masks = masks.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), 1)
     else:
         if grid_split > 0:
-            imgs = imgs.reshape(-1,(2**grid_split),256//(2**grid_split),(2**grid_split),256//(2**grid_split),1)
+            imgs = imgs.reshape(-1,(2**grid_split),imgs_shape//(2**grid_split),(2**grid_split),imgs_shape//(2**grid_split),1)
             imgs = np.swapaxes(imgs, 2, 3)
-            imgs = imgs.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), 1)
+            imgs = imgs.reshape(-1, imgs_shape//(2**grid_split), imgs_shape//(2**grid_split), 1)
             masks = masks.reshape((-1,(2**grid_split),256//(2**grid_split), (2**grid_split), 256//(2**grid_split),1))
             masks = np.swapaxes(masks, 2, 3)
             masks = masks.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), 1)
@@ -58,13 +69,13 @@ def gen_data_split(path_to_data = '../data/train_val_data/', path_to_test = '../
     images, masks = extract_data(path_to_data, channels, grid_split)
     test_images, test_masks = extract_data(path_to_test, channels, grid_split)
 
-    if grid_split > 0:
-        indices = []
-        for i in range(0, np.shape(masks)[0], 2):
-            if np.count_nonzero(masks[i]) < 400:
-                indices.append(i)
-        masks = np.delete(masks, indices, axis = 0)
-        images = np.delete(images, indices, axis = 0)
+    # if grid_split > 0:
+    #     indices = []
+    #     for i in range(0, np.shape(masks)[0], 2):
+    #         if np.count_nonzero(masks[i]) < 400:
+    #             indices.append(i)
+    #     masks = np.delete(masks, indices, axis = 0)
+    #     images = np.delete(images, indices, axis = 0)
 
     n_images = np.shape(images)[0]
 
