@@ -95,7 +95,6 @@ def gen_data_split(path_to_data = '../data/train_val_data/', path_to_test = '../
 
     train_images, val_images, test_images = zca_whitening([train_images, val_images, test_images], whitening_coeff)
 
-
     img_datagen = ImageDataGenerator(**maskgen_args)
     seed = 1
     mask_generator = img_datagen.flow(train_mask, batch_size=b_size, seed = seed)

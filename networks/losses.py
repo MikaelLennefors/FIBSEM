@@ -3,12 +3,12 @@ import tensorflow as tf
 from tensorflow.keras.layers import *
 import numpy as np
 
-def iou_loss(y_true, y_pred, smooth=240):
+def iou_loss(y_true, y_pred, smooth=140):
     y_true_c = 1 - y_true
     y_pred_c = 1 - y_pred
     intersection = keras.sum(y_true * keras.abs(y_pred), axis=-1)
     sum_ = keras.sum(y_true + keras.abs(y_pred), axis=-1)
-    jac = (intersection + smooth) / (sum_ - intersection + smooth)
+    jac = (intersection+smooth) / (sum_ - intersection+smooth)
 
     # intersection_c = keras.sum(keras.abs(y_true_c * y_pred_c), axis=-1)
     # sum_c = keras.sum(keras.abs(y_true_c) + keras.abs(y_pred_c), axis=-1)

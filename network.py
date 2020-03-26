@@ -33,8 +33,8 @@ if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
     gpu = 'Xp'
 
 #if channels > 1:
-data_path = './data/train_val_data_raw/'
-test_path = './data/test_data_raw/'
+data_path = './data/train_val_data_border/'
+test_path = './data/test_data_border/'
 #else:
 #    data_path = './data/train_val_data/'
 #    test_path = './data/test_data/'
@@ -53,17 +53,17 @@ grid_split = 0
 NO_OF_EPOCHS = 50
 aug_batch = 180
 max_count = 3
-b_size = 32
+b_size = 1
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
 elast_affine_alpha = 0.08
 net_filters = 32
 prop_elastic = 0.05
-net_lr = 2e-4
+net_lr = 1e-4
 net_bin_split = 0.3164
 net_drop = 0.5
-net_activ_fun = 1
+net_activ_fun = 0
 
 
 aug_args = dict(
@@ -117,7 +117,7 @@ for i in configurations:
     else:
         input_size = (np.shape(val_img)[1]//(2**grid_split),channels)
         m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-    m.compile(optimizer = Adam(lr = net_lr), loss = bce_dice_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
+    m.compile(optimizer = Adam(lr = net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
     #checkpoint = ModelCheckpoint(weights_path, monitor='val_iou_coef',
     #                             verbose=1, save_best_only=True, mode='max')
 
@@ -265,21 +265,20 @@ for i in configurations:
         for x, y in train_gen:
             x = np.array(x)
 
-            if elast_deform == True:
+            # if elast_deform == True:
 
-                for j in range(np.shape(x)[0]):
-                    if random.random() < prop_elastic:
-                        img = x[j]
-                        mask = y[j]
-                        im_merge = np.concatenate((img, mask), axis=2)
-                        im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha)
+            #     for j in range(np.shape(x)[0]):
+            #         if random.random() < prop_elastic:
+            #             img = x[j]
+            #             mask = y[j]
+            #             im_merge = np.concatenate((img, mask), axis=2)
+            #             im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha)
 
-                        im_t = im_merge_t[...,0]
-                        im_mask_t = im_merge_t[...,1]
-                        x[j] = im_t
-                        y[j] = im_mask_t
+            #             im_t = im_merge_t[...,0]
+            #             im_mask_t = im_merge_t[...,1]
+            #             x[j] = im_t
+            #             y[j] = im_mask_t
             y = np.around(y / 255.)
-
             results = m.fit(x, y, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
