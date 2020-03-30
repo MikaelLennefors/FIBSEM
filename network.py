@@ -3,7 +3,12 @@ import os
 import param
 import random
 import sys
+import logging
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
+logging.getLogger('tensorflow').setLevel(logging.FATAL)
 import tensorflow as tf
+
 from PIL import Image
 from tensorflow.keras.callbacks import *
 from tensorflow.keras.preprocessing.image import array_to_img
@@ -18,6 +23,8 @@ sys.path.insert(1, './processing')
 from elastic_deformation import elastic_transform
 from split_data import gen_data_split
 from datetime import datetime
+from extract_data import extract_data
+from whitening import zca_whitening
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
 os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
 
@@ -32,12 +39,8 @@ gpu = 'V'
 if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
     gpu = 'Xp'
 
-#if channels > 1:
 data_path = './data/train_val_data_border/'
 test_path = './data/test_data_border/'
-#else:
-#    data_path = './data/train_val_data/'
-#    test_path = './data/test_data/'
 log_path = './results/{}/log.out'.format(gpu)
 weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
@@ -85,8 +88,13 @@ with open('results/{}/results.txt'.format(gpu), 'w') as f:
         f.write('val_FP\t')
         f.write('val_FN')
 
-train_gen, val_img, val_mask, test_img, test_mask = gen_data_split(path_to_data = data_path, path_to_test = test_path,
-        channels = channels, b_size = aug_batch, whitening_coeff = zca_coeff, maskgen_args = aug_args, grid_split = grid_split)
+images, masks = extract_data(data_path, channels, grid_split)
+test_img, test_mask = extract_data(test_path, channels, grid_split)
+
+test_img = zca_whitening(test_img, zca_coeff)
+test_mask = test_mask / 255.
+
+train_gen, val_img, val_mask = gen_data_split(images, masks, channels = channels, b_size = aug_batch, whitening_coeff = zca_coeff, maskgen_args = aug_args)
 
 for i in configurations:
 
@@ -160,24 +168,24 @@ for i in configurations:
             x = np.swapaxes(x,1,2)
             x = np.swapaxes(x,2,3)
 
-            if elast_deform == True:
-                for j in range(np.shape(x)[0]):
-                    if random.random() < prop_elastic:
-                        randoint = random.randint(0, 1e3)
-                        mask = y[j].copy()
-                        for k in range(channels):
-                            seed = np.random.RandomState(randoint)
-                            img = x[j,:,:,k]
-                            im_merge = np.concatenate((img, mask), axis=2)
-                            im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
+            # if elast_deform == True:
+            #     for j in range(np.shape(x)[0]):
+            #         if random.random() < prop_elastic:
+            #             randoint = random.randint(0, 1e3)
+            #             mask = y[j].copy()
+            #             for k in range(channels):
+            #                 seed = np.random.RandomState(randoint)
+            #                 img = x[j,:,:,k]
+            #                 im_merge = np.concatenate((img, mask), axis=2)
+            #                 im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
 
-                            im_t = im_merge_t[...,0]
-                            im_mask_t = im_merge_t[...,1]
-                            x[j,:,:,k] = im_t
-                            y[j] = im_mask_t
+            #                 im_t = im_merge_t[...,0]
+            #                 im_mask_t = im_merge_t[...,1]
+            #                 x[j,:,:,k] = im_t
+            #                 y[j] = im_mask_t
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
@@ -196,24 +204,24 @@ for i in configurations:
             x = np.swapaxes(x,1,2)
             x = np.swapaxes(x,2,3)
 
-            if elast_deform == True:
-                for j in range(np.shape(x)[0]):
-                    if random.random() < prop_elastic:
-                        randoint = random.randint(0, 1e3)
-                        mask = y[j].copy()
-                        for k in range(channels):
-                            seed = np.random.RandomState(randoint)
-                            img = x[j,:,:,k]
-                            im_merge = np.concatenate((img, mask), axis=2)
-                            im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
+            # if elast_deform == True:
+            #     for j in range(np.shape(x)[0]):
+            #         if random.random() < prop_elastic:
+            #             randoint = random.randint(0, 1e3)
+            #             mask = y[j].copy()
+            #             for k in range(channels):
+            #                 seed = np.random.RandomState(randoint)
+            #                 img = x[j,:,:,k]
+            #                 im_merge = np.concatenate((img, mask), axis=2)
+            #                 im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
 
-                            im_t = im_merge_t[...,0]
-                            im_mask_t = im_merge_t[...,1]
-                            x[j,:,:,k] = im_t
-                            y[j] = im_mask_t
+            #                 im_t = im_merge_t[...,0]
+            #                 im_mask_t = im_merge_t[...,1]
+            #                 x[j,:,:,k] = im_t
+            #                 y[j] = im_mask_t
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
@@ -232,24 +240,24 @@ for i in configurations:
             x = np.swapaxes(x,1,2)
             x = np.swapaxes(x,2,3)
 
-            if elast_deform == True:
-                for j in range(np.shape(x)[0]):
-                    if random.random() < prop_elastic:
-                        randoint = random.randint(0, 1e3)
-                        mask = y[j].copy()
-                        for k in range(channels):
-                            seed = np.random.RandomState(randoint)
-                            img = x[j,:,:,k]
-                            im_merge = np.concatenate((img, mask), axis=2)
-                            im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
+            # if elast_deform == True:
+            #     for j in range(np.shape(x)[0]):
+            #         if random.random() < prop_elastic:
+            #             randoint = random.randint(0, 1e3)
+            #             mask = y[j].copy()
+            #             for k in range(channels):
+            #                 seed = np.random.RandomState(randoint)
+            #                 img = x[j,:,:,k]
+            #                 im_merge = np.concatenate((img, mask), axis=2)
+            #                 im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
 
-                            im_t = im_merge_t[...,0]
-                            im_mask_t = im_merge_t[...,1]
-                            x[j,:,:,k] = im_t
-                            y[j] = im_mask_t
+            #                 im_t = im_merge_t[...,0]
+            #                 im_mask_t = im_merge_t[...,1]
+            #                 x[j,:,:,k] = im_t
+            #                 y[j] = im_mask_t
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
@@ -279,7 +287,7 @@ for i in configurations:
             #             x[j] = im_t
             #             y[j] = im_mask_t
             y = np.around(y / 255.)
-            results = m.fit(x, y, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))

@@ -5,6 +5,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.layers import *
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.utils import multi_gpu_model
+from tensorflow.keras.activations import relu, elu
 import math
 import h5py
 from tensorflow.keras import backend as K
@@ -25,7 +26,9 @@ def squeeze(x):
     x = K.squeeze(x, axis=-1)
     return x
 
-
+def squeeze_2(x):
+    x = K.squeeze(x, axis=-2)
+    return x
 def BN_block(filter_num, input, activation):
     x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
     x = activation(x)
@@ -144,35 +147,40 @@ def squeeze_excite_block(input, activation, ratio=16):
     return x
 
 
-def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 1, multiple = 64, learning_rate = 1e-4, dout = 0.5, reg_coeff = 0.001):
+def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, multiple = 64, learning_rate = 1e-4, dout = 0.5, reg_coeff = 0.001):
     K.clear_session()
 
     if activation == 0:
-       activation_fun = relu
+       activation_fun = elu
     else:
        activation_fun = losses.RReLU()
 
     inputs = Input(shape=(input_size[0],input_size[0],input_size[1],1))
-    input2d = Lambda(squeeze)(inputs)
+    inputs2d = Lambda(squeeze)(inputs)
+    inputs2d = BN_block(multiple, inputs2d, activation_fun)
     conv3d1 = BN_block3d(multiple, inputs, activation_fun)
 
-    pool3d1 = MaxPooling3D(pool_size=2)(conv3d1)
+    conv1 = D_SE_Add(multiple, conv3d1, inputs2d, activation_fun)
 
-    conv3d2 = BN_block3d(2*multiple, pool3d1, activation_fun)
-    if input_size[1] != 3:
+    if input_size[0] == 258:
+        conv1 = Conv2D(multiple, 3, padding = 'valid', kernel_initializer = 'he_normal')(conv1)
+        conv1 = activation_fun(conv1)
+
+    if input_size[1] > 3:
         pool3d2 = MaxPooling3D(pool_size=2)(conv3d2)
 
         conv3d3 = BN_block3d(4*multiple, pool3d2, activation_fun)
 
-
-    conv1 = BN_block(multiple, input2d, activation_fun)
+    #conv1 = BN_block(multiple, x, activation_fun)
 
     #conv1 = D_Add(32, conv3d1, conv1, activation_fun)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
     conv2 = BN_block(2*multiple, pool1, activation_fun)
+
     if input_size[1] > 3:
-        conv2 = D_SE_Add(2*multiple, conv3d2, conv2, activation_fun)
+        conv2 = D_SE_Add(2*multiple, x, conv2, activation_fun)
+
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
     conv3 = BN_block(4*multiple, pool2, activation_fun)
@@ -372,7 +380,7 @@ def conv_bn_block(x, filter):
 
 def main():
 
-    model = D_Unet(input_size = (256,3))
+    model = D_Unet(input_size = (258,3))
     print(model.summary())
 
 if __name__ == '__main__':

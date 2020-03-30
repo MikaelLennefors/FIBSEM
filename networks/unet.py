@@ -57,7 +57,6 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     up7 = conv_block_up(up6, conv3, 4*multiple, activation_fun)
     up8 = conv_block_up(up7, conv2, 2*multiple, activation_fun)
     up9 = conv_block_up(up8, conv1, multiple, activation_fun)
-
     #conv9 = conv_block_down(up9, multiple, activation_fun)
     #conv9 = BatchNormalization()(conv9)
     conv10 = Conv2D(1, 1, activation = 'sigmoid')(up9)
