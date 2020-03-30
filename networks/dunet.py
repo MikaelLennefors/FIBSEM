@@ -29,6 +29,7 @@ def squeeze(x):
 def squeeze_2(x):
     x = K.squeeze(x, axis=-2)
     return x
+
 def BN_block(filter_num, input, activation):
     x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
     x = activation(x)
