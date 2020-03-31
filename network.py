@@ -160,144 +160,49 @@ for i in configurations:
 
 
     count = 0
+    for c in train_gen:
+        y = np.array(c[-1])
+        x = []
+        for j in range(len(c) - 1):
+            x.append(c[j])
+        x = np.array(x)
 
-    if channels == 7:
-        for x1, x2, x3, x4, x5, x6, x7, y in train_gen:
-            x = np.stack((x1,x2,x3,x4,x5,x6,x7))
-            x = np.swapaxes(x,0,1)
-            x = np.swapaxes(x,1,2)
-            x = np.swapaxes(x,2,3)
+        x = np.swapaxes(x,0,1)
+        x = np.swapaxes(x,1,2)
+        x = np.swapaxes(x,2,3)
+        if np.shape(x)[3] == 1:
+            x = np.squeeze(x, axis = 3)
+        if elast_deform == True:
+            for j in range(np.shape(x)[0]):
+                if random.random() < prop_elastic:
+                    randoint = random.randint(0, 1e3)
+                    for k in range(channels):
+                        seed = np.random.RandomState(randoint)
+                        img = x[j,:,:,k]
+                        im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
 
-            # if elast_deform == True:
-            #     for j in range(np.shape(x)[0]):
-            #         if random.random() < prop_elastic:
-            #             randoint = random.randint(0, 1e3)
-            #             mask = y[j].copy()
-            #             for k in range(channels):
-            #                 seed = np.random.RandomState(randoint)
-            #                 img = x[j,:,:,k]
-            #                 im_merge = np.concatenate((img, mask), axis=2)
-            #                 im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
+                        im_t = im_merge_t[...,0]
+                        x[j,:,:,k] = im_t
+                    mask = y[j].copy().reshape(256,256)
+                    seed = np.random.RandomState(randoint)
+                    im_merge_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
 
-            #                 im_t = im_merge_t[...,0]
-            #                 im_mask_t = im_merge_t[...,1]
-            #                 x[j,:,:,k] = im_t
-            #                 y[j] = im_mask_t
-            y = np.around(y / 255.)
+                    im_mask_t = im_merge_t[...,0]
+                    y[j] = im_mask_t.reshape(256,256,1)
+        y = np.around(y / 255.)
 
-            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
-            i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
-            i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
-            i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
-            i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
-            i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
-            i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
+        results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+        i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
+        i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
+        i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
+        i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
+        i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
+        i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
 
-            count += 1
-            print(max_count - count)
-            if count >= max_count:
-                break
-    elif channels == 5:
-        for x1, x2, x3, x4, x5, y in train_gen:
-            x = np.stack((x1,x2,x3,x4,x5))
-            x = np.swapaxes(x,0,1)
-            x = np.swapaxes(x,1,2)
-            x = np.swapaxes(x,2,3)
-
-            # if elast_deform == True:
-            #     for j in range(np.shape(x)[0]):
-            #         if random.random() < prop_elastic:
-            #             randoint = random.randint(0, 1e3)
-            #             mask = y[j].copy()
-            #             for k in range(channels):
-            #                 seed = np.random.RandomState(randoint)
-            #                 img = x[j,:,:,k]
-            #                 im_merge = np.concatenate((img, mask), axis=2)
-            #                 im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
-
-            #                 im_t = im_merge_t[...,0]
-            #                 im_mask_t = im_merge_t[...,1]
-            #                 x[j,:,:,k] = im_t
-            #                 y[j] = im_mask_t
-            y = np.around(y / 255.)
-
-            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
-            i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
-            i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
-            i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
-            i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
-            i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
-            i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
-
-            count += 1
-            print(max_count - count)
-            if count >= max_count:
-                break
-    elif channels == 3:
-        for x1, x2, x3, y in train_gen:
-            x = np.stack((x1,x2,x3))
-            x = np.swapaxes(x,0,1)
-            x = np.swapaxes(x,1,2)
-            x = np.swapaxes(x,2,3)
-
-            # if elast_deform == True:
-            #     for j in range(np.shape(x)[0]):
-            #         if random.random() < prop_elastic:
-            #             randoint = random.randint(0, 1e3)
-            #             mask = y[j].copy()
-            #             for k in range(channels):
-            #                 seed = np.random.RandomState(randoint)
-            #                 img = x[j,:,:,k]
-            #                 im_merge = np.concatenate((img, mask), axis=2)
-            #                 im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha, random_state = seed)
-
-            #                 im_t = im_merge_t[...,0]
-            #                 im_mask_t = im_merge_t[...,1]
-            #                 x[j,:,:,k] = im_t
-            #                 y[j] = im_mask_t
-            y = np.around(y / 255.)
-
-            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
-            i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
-            i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
-            i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
-            i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
-            i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
-            i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
-
-            count += 1
-            print(max_count - count)
-            if count >= max_count:
-                break
-    else:
-        for x, y in train_gen:
-            x = np.array(x)
-
-            # if elast_deform == True:
-
-            #     for j in range(np.shape(x)[0]):
-            #         if random.random() < prop_elastic:
-            #             img = x[j]
-            #             mask = y[j]
-            #             im_merge = np.concatenate((img, mask), axis=2)
-            #             im_merge_t = elastic_transform(im_merge, im_merge.shape[1] * elast_alpha, im_merge.shape[1] * elast_sigma, im_merge.shape[1] * elast_affine_alpha)
-
-            #             im_t = im_merge_t[...,0]
-            #             im_mask_t = im_merge_t[...,1]
-            #             x[j] = im_t
-            #             y[j] = im_mask_t
-            y = np.around(y / 255.)
-            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
-            i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
-            i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
-            i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
-            i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
-            i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
-            i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
-            count += 1
-            print(max_count - count)
-            if count >= max_count:
-                break
+        count += 1
+        print(max_count - count)
+        if count >= max_count:
+            break
     with open('results/{}/results.txt'.format(gpu), 'a') as f:
         f.write('\n')
         for key, value in i.items():
@@ -305,22 +210,3 @@ for i in configurations:
                 f.write('%s' % value)
             else:
                 f.write('%s\t' % value)
-
-    # m.evaluate(x = test_img, y = test_mask)
-    # # new_mask = np.around(m.predict(np.expand_dims(val_img[0], axis = 0))).reshape(256,256,1)
-
-
-    # for i in range(len(x)):
-    #     testy_mask = m.predict(np.expand_dims(x[i], axis = 0)).reshape(256,256).astype(np.uint8)*255
-    #     #print(np.max(testy_mask))
-    #     diff_mask = np.abs(testy_mask - y[i].reshape(256,256)).astype(np.uint8)*255
-    #     im = Image.fromarray(testy_mask)
-    #     im2 = Image.fromarray(diff_mask)
-    #     #im3 = Image.fromarray(x[i].reshape(256,256).astype(np.uint8))
-    #     im4 = Image.fromarray(y[i].reshape(256,256).astype(np.uint8)*255)
-    #     im.save(pred_path + 'pred_mask' + '_' + str(i).zfill(2) + '.png')
-    #     im2.save(pred_path + 'diff_mask' + '_' + str(i).zfill(2) + '.png')
-    #     #im3.save(pred_path + 'test_img' + '_' + str(i).zfill(2) + '.png')
-    #     im4.save(pred_path + 'true_mask' + '_' + str(i).zfill(2) + '.png')
-
-    # m.save('Model.h5')
