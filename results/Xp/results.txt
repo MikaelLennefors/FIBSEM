@@ -1,1 +1,0 @@
-net_filters	net_lr	net_drop	prop_elastic	val_iou	val_accuracy	val_TP	val_TN	val_FP	val_FN
