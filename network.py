@@ -4,6 +4,7 @@ import param
 import random
 import sys
 import logging
+import statistics
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
 logging.getLogger('tensorflow').setLevel(logging.FATAL)
@@ -53,9 +54,9 @@ configurations = [params.generate_hyperparameters() for _ in range(10000)]
 grid_split = 0
 
 
-NO_OF_EPOCHS = 50
+NO_OF_EPOCHS = 5
 aug_batch = 180
-max_count = 3
+max_count = 1
 b_size = 1
 elast_deform = True
 elast_alpha = 2
@@ -94,8 +95,94 @@ test_img, test_mask = extract_data(test_path, channels, grid_split)
 test_img = zca_whitening(test_img, zca_coeff)
 test_mask = test_mask / 255.
 
-train_gen, val_img, val_mask = gen_data_split(images, masks, channels = channels, b_size = aug_batch, whitening_coeff = zca_coeff, maskgen_args = aug_args)
+t_gen = []
+v_img = []
+v_mask = []
+mean_benchmark = []
+for i in range(3):
+    a, b, c = gen_data_split(images, masks, channels = channels, b_size = aug_batch, whitening_coeff = zca_coeff, maskgen_args = aug_args)
+    t_gen.append(a)
+    v_img.append(b)
+    v_mask.append(c)
+def evaluate_network(net_lr, net_drop):
+    for i in range(3):
+        train_gen = t_gen[i]
+        val_img = v_img[i]
+        val_mask = v_mask[i]
+        if channels == 1:
+            input_size = np.shape(val_img)[1]//(2**grid_split)
+            m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
+        else:
+            input_size = (np.shape(val_img)[1]//(2**grid_split),channels)
+            m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
+        m.compile(optimizer = Adam(lr = net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy'])
 
+        earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.001, patience = 100, mode = 'max')
+        earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.5, patience = 30, mode = 'max')
+        class PredictionCallback(tf.keras.callbacks.Callback):
+            def on_epoch_end(self, epoch, logs={}):
+                predic_mask = self.model.predict(np.expand_dims(test_img[0], axis = 0))
+                testy_mask = np.around(predic_mask).reshape(256,256).astype(np.uint8)*255
+
+                im = Image.fromarray(testy_mask)
+                im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
+
+
+        callbacks_list = [earlystopping1, earlystopping2, PredictionCallback()]
+
+        count = 0
+        for c in train_gen:
+            y = np.array(c[-1])
+            x = []
+            for j in range(len(c) - 1):
+                x.append(c[j])
+            x = np.array(x)
+
+            x = np.swapaxes(x,0,1)
+            x = np.swapaxes(x,1,2)
+            x = np.swapaxes(x,2,3)
+            if np.shape(x)[3] == 1:
+                x = np.squeeze(x, axis = 3)
+            if elast_deform == True:
+                for j in range(np.shape(x)[0]):
+                    if random.random() < prop_elastic:
+                        randoint = random.randint(0, 1e3)
+                        for k in range(channels):
+                            seed = np.random.RandomState(randoint)
+                            img = x[j,:,:,k]
+                            im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
+
+                            im_t = im_merge_t[...,0]
+                            x[j,:,:,k] = im_t
+                        mask = y[j].copy().reshape(256,256)
+                        seed = np.random.RandomState(randoint)
+                        im_merge_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
+
+                        im_mask_t = im_merge_t[...,0]
+                        y[j] = im_mask_t.reshape(256,256,1)
+            y = np.around(y / 255.)
+
+            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
+            # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
+            # i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
+            # i['val_TN'] = max(i['val_TN'], max(results.history['val_TN']))
+            # i['val_FP'] = max(i['val_FP'], max(results.history['val_FP']))
+            # i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
+
+            count += 1
+            print(max_count - count)
+            if count >= max_count:
+                break
+        pred = m.evaluate(test_img, test_mask)
+        score = pred[1]
+        mean_benchmark.append(score)
+        m1 = statistics.mean(mean_benchmark)
+        mdev = statistics.pstdev(mean_benchmark)
+
+
+
+raise
 for i in configurations:
 
 
@@ -106,12 +193,12 @@ for i in configurations:
     # # net_bin_split = i['net_bin_split']
     # net_drop = i['net_drop']
     #zca_coeff = i['zca_coeff']
-    i['val_iou'] = 0
-    i['val_accuracy'] = 0
-    i['val_TP'] = 0
-    i['val_TN'] = 0
-    i['val_FP'] = 0
-    i['val_FN'] = 0
+    # i['val_iou'] = 0
+    # i['val_accuracy'] = 0
+    # i['val_TP'] = 0
+    # i['val_TN'] = 0
+    # i['val_FP'] = 0
+    # i['val_FN'] = 0
 
     # conf_name = 'logs/{}_{}_{:.2e}_{:.2f}_{}_{:.2f}_{:.2f}_{}'.format(channels, net_filters, net_lr, net_bin_split, net_activ_fun,
     #     net_drop, prop_elastic, datetime.now().strftime('%m-%d_%H:%M:%S'))
