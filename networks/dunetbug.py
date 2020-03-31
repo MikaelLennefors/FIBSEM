@@ -50,7 +50,7 @@ def D_Unet():
         UpSampling2D(size=(2, 2))(conv8))
     merge9 = Concatenate()([conv1, up9])
     conv9 = BN_block(32, merge9)
-    conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)  # conv10作为输出
+    conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
     model = Model(input=inputs, output=conv10)
 
     return model
