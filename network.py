@@ -5,6 +5,7 @@ import random
 import sys
 import logging
 import statistics
+import time
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
 logging.getLogger('tensorflow').setLevel(logging.FATAL)
@@ -162,7 +163,7 @@ def evaluate_network(net_lr, net_drop):
                         y[j] = im_mask_t.reshape(256,256,1)
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             # i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
@@ -171,17 +172,36 @@ def evaluate_network(net_lr, net_drop):
             # i['val_FN'] = max(i['val_FN'], max(results.history['val_FN']))
 
             count += 1
-            print(max_count - count)
+            #print(max_count - count)
             if count >= max_count:
                 break
-        pred = m.evaluate(test_img, test_mask)
+        pred = m.evaluate(test_img, test_mask, verbose = 0)
         score = pred[1]
+
         mean_benchmark.append(score)
-        m1 = statistics.mean(mean_benchmark)
-        mdev = statistics.pstdev(mean_benchmark)
+        m1 = np.mean(mean_benchmark)
+        mdev = np.std(mean_benchmark)
+    return m1
 
+from bayes_opt import BayesianOptimization
 
+pbounds = {'net_drop': (0.0, 0.5),
+    'net_lr': (0.0, 0.1)
+    }
 
+optimizer = BayesianOptimization(
+    f=evaluate_network,
+    pbounds=pbounds,
+    verbose=2,  # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
+    random_state=1,
+)
+
+start_time = time.time()
+optimizer.maximize(init_points=10, n_iter=100,)
+time_took = time.time() - start_time
+
+print(f"Total runtime: {hms_string(time_took)}")
+print(optimizer.max)
 raise
 for i in configurations:
 
@@ -278,7 +298,7 @@ for i in configurations:
                     y[j] = im_mask_t.reshape(256,256,1)
         y = np.around(y / 255.)
 
-        results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+        results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
         i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
         i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
         i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
