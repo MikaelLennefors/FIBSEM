@@ -7,7 +7,6 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from whitening import zca_whitening
 import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing.image import array_to_img
-from sklearn.model_selection import StratifiedShuffleSplit
 
 def extract_data(path, channels, grid_split = 0):
     og_dir = os.listdir(path)
