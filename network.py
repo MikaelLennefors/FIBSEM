@@ -6,10 +6,13 @@ import sys
 import logging
 import statistics
 import time
+import math
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
-logging.getLogger('tensorflow').setLevel(logging.FATAL)
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
+# logging.getLogger('tensorflow').setLevel(logging.FATAL)
 import tensorflow as tf
+
+#from tensorflow.keras.utils import multi_gpu_model
 
 from PIL import Image
 from tensorflow.keras.callbacks import *
@@ -31,7 +34,7 @@ os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
 os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
 
 while int(os.environ["CUDA_VISIBLE_DEVICES"]) not in [0,1]:
-    os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
+   os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
 
 channels = int(input("Choose channels, 1, 3, 5 or 7: "))
 while channels not in [1,3,5,7]:
@@ -39,7 +42,7 @@ while channels not in [1,3,5,7]:
 
 gpu = 'V'
 if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
-    gpu = 'Xp'
+   gpu = 'Xp'
 
 data_path = './data/train_val_data_border/'
 test_path = './data/test_data_border/'
@@ -55,10 +58,10 @@ configurations = [params.generate_hyperparameters() for _ in range(10000)]
 grid_split = 0
 
 
-NO_OF_EPOCHS = 5
+NO_OF_EPOCHS = 200
 aug_batch = 180
-max_count = 1
-b_size = 1
+max_count = 5
+b_size = 8
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
@@ -69,6 +72,7 @@ net_lr = 1e-5
 net_bin_split = 0.3164
 net_drop = 0.5
 net_activ_fun = 0
+
 
 
 aug_args = dict(
@@ -105,18 +109,26 @@ for i in range(3):
     t_gen.append(a)
     v_img.append(b)
     v_mask.append(c)
-def evaluate_network(net_lr, net_drop):
+def evaluate_network(net_lr, net_filters):
+    net_lr = math.pow(10,-net_lr)
+    net_filters = int(math.pow(2,math.floor(net_filters)+4))
+    #print(net_lr)
+    #print(net_filters)
+    #raise
     for i in range(3):
         train_gen = t_gen[i]
         val_img = v_img[i]
         val_mask = v_mask[i]
+
         if channels == 1:
             input_size = np.shape(val_img)[1]//(2**grid_split)
             m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
         else:
             input_size = (np.shape(val_img)[1]//(2**grid_split),channels)
             m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-        m.compile(optimizer = Adam(lr = net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy'])
+        m.compile(optimizer = Adam(net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy'])
+
+
 
         earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.001, patience = 100, mode = 'max')
         earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.5, patience = 30, mode = 'max')
@@ -152,18 +164,19 @@ def evaluate_network(net_lr, net_drop):
                             seed = np.random.RandomState(randoint)
                             img = x[j,:,:,k]
                             im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
-
-                            im_t = im_merge_t[...,0]
-                            x[j,:,:,k] = im_t
+                            if channels > 1:
+                                x[j,:,:,k] = im_merge_t
+                            else:
+                                x[j,:,:,k] = im_merge_t.reshape(img.shape[0],img.shape[1])
                         mask = y[j].copy().reshape(256,256)
                         seed = np.random.RandomState(randoint)
-                        im_merge_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
-
-                        im_mask_t = im_merge_t[...,0]
-                        y[j] = im_mask_t.reshape(256,256,1)
+                        im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
+                        #print(np.shape(im_mask_t))
+                        # im_mask_t = im_merge_t[...,0]
+                        y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             # i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
@@ -182,11 +195,12 @@ def evaluate_network(net_lr, net_drop):
         m1 = np.mean(mean_benchmark)
         mdev = np.std(mean_benchmark)
     return m1
-
+test = evaluate_network(2, 4)
+raise
 from bayes_opt import BayesianOptimization
 
-pbounds = {'net_drop': (0.0, 0.5),
-    'net_lr': (0.0, 0.1)
+pbounds = {'net_filters': (0.0, 3.0),
+    'net_lr': (2.0, 5.0)
     }
 
 optimizer = BayesianOptimization(
@@ -200,7 +214,7 @@ start_time = time.time()
 optimizer.maximize(init_points=10, n_iter=100,)
 time_took = time.time() - start_time
 
-print(f"Total runtime: {hms_string(time_took)}")
+# print(f"Total runtime: {hms_string(time_took)}")
 print(optimizer.max)
 raise
 for i in configurations:
