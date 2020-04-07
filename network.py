@@ -33,21 +33,18 @@ from whitening import zca_whitening
 
 gpus = tf.config.list_physical_devices('GPU')
 
-if len(gpus) == 1:
-    gpu = 'Xp'
-else:
-    gpu = 'V'
+
 channels = 1
 
+gpu = 'Xp'
+
 if len(sys.argv) > 1:
-    if int(sys.argv[1]) == 1:
+    if sys.argv[1] == 1:
         gpu = 'V'
+
 if len(sys.argv) > 2:
     channels = int(sys.argv[2])
 
-print(gpu)
-print(channels)
-raise
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
 os.environ["CUDA_VISIBLE_DEVICES"] = gpu
 

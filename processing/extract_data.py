@@ -45,6 +45,4 @@ def extract_data(path, channels):
     elif channels == 5:
         imgs = np.delete(imgs,[0,6], axis = 3)
 
-    print(np.shape(imgs))
-    print(np.shape(masks))
     return imgs, masks
