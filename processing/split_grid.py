@@ -8,7 +8,7 @@ from whitening import zca_whitening
 import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing.image import array_to_img
 
-def extract_data(path, channels):
+def split_grid(images, masks, grid_split):
     og_dir = os.listdir(path)
     og_dir.sort()
 
@@ -40,11 +40,26 @@ def extract_data(path, channels):
         imgs = np.array(np.split(imgs, np.shape(imgs)[0]/7))
         imgs = np.swapaxes(imgs,1,2)
         imgs = np.swapaxes(imgs,2,3)
+
+        if grid_split > 0:
+            imgs = imgs.reshape(-1,(2**grid_split),imgs_shape//(2**grid_split),(2**grid_split),imgs_shape//(2**grid_split),channels,1)
+            imgs = np.swapaxes(imgs, 2, 3)
+            imgs = imgs.reshape(-1, imgs_shape//(2**grid_split), imgs_shape//(2**grid_split), channels, 1)
+            masks = masks.reshape((-1,(2**grid_split),256//(2**grid_split), (2**grid_split), 256//(2**grid_split),1))
+            masks = np.swapaxes(masks, 2, 3)
+            masks = masks.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), 1)
+    else:
+        if grid_split > 0:
+            imgs = imgs.reshape(-1,(2**grid_split),imgs_shape//(2**grid_split),(2**grid_split),imgs_shape//(2**grid_split),1)
+            imgs = np.swapaxes(imgs, 2, 3)
+            imgs = imgs.reshape(-1, imgs_shape//(2**grid_split), imgs_shape//(2**grid_split), 1)
+            masks = masks.reshape((-1,(2**grid_split),256//(2**grid_split), (2**grid_split), 256//(2**grid_split),1))
+            masks = np.swapaxes(masks, 2, 3)
+            masks = masks.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), 1)
     if channels == 3:
         imgs = np.delete(imgs,[0,1,5,6], axis = 3)
     elif channels == 5:
         imgs = np.delete(imgs,[0,6], axis = 3)
 
-    print(np.shape(imgs))
-    print(np.shape(masks))
+
     return imgs, masks
