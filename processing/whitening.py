@@ -1,8 +1,8 @@
 import numpy as np
 import time
 import scipy.linalg
-import jax.numpy as jnp
-import jax.scipy as jsp
+# import jax.numpy as jnp
+# import jax.scipy as jsp
 def zca_whitening(img, epsilon = 1e-3):
 
     channels = np.shape(img)[3]

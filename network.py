@@ -32,22 +32,22 @@ from extract_data import extract_data
 from whitening import zca_whitening
 from split_grid import split_grid
 
-gpus = tf.config.list_physical_devices('GPU')
-
-
 channels = 1
 
 gpu = 'Xp'
 
 if len(sys.argv) > 1:
-    if sys.argv[1] == 1:
+    if int(sys.argv[1]) == 1:
         gpu = 'V'
-
+print(gpu)
 if len(sys.argv) > 2:
     channels = int(sys.argv[2])
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
-os.environ["CUDA_VISIBLE_DEVICES"] = gpu
+if gpu == 'Xp':
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+else:
+    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 # while int(os.environ["CUDA_VISIBLE_DEVICES"]) not in [0,1]:
 #    os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
@@ -221,7 +221,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
 
 pbounds = {'net_drop': (0.0,0.5),
     'net_filters': (0.0, 3.0),
-    'net_lr': (2.0, 5.0),
+    'net_lr': (3.0, 6.0),
     'prop_elastic': (0.0, 0.3)
     }
 
