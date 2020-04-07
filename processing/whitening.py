@@ -1,5 +1,8 @@
 import numpy as np
-
+import time
+import scipy.linalg
+import jax.numpy as jnp
+import jax.scipy as jsp
 def zca_whitening(img, epsilon = 1e-3):
 
     channels = np.shape(img)[3]
@@ -14,8 +17,15 @@ def zca_whitening(img, epsilon = 1e-3):
     img = img / 255.
 
     img = img - img.mean(axis=0)
-    U, S, V = np.linalg.svd(np.cov(img, rowvar=True))
-
+    start_time = time.time()
+    co = np.cov(img, rowvar=True)
+    cov_time = time.time() - start_time
+    start_time2 = time.time()
+    U, S, V = scipy.linalg.svd(co)
+    svd_time = time.time() - start_time2
+    print("svd time:",svd_time)
+    print("svd over cov:", svd_time/cov_time)
+    print("--"*20)
     img_ZCA = U.dot(np.diag(1.0/np.sqrt(S + epsilon))).dot(U.T).dot(img)
 
     min_ZCA = img_ZCA.min()

@@ -30,6 +30,7 @@ from split_data import gen_data_split
 from datetime import datetime
 from extract_data import extract_data
 from whitening import zca_whitening
+from split_grid import split_grid
 
 gpus = tf.config.list_physical_devices('GPU')
 
@@ -112,6 +113,9 @@ with open('results/{}/results.txt'.format(gpu), 'w') as f:
 images, masks = extract_data(data_path, channels)
 test_img, test_mask = extract_data(test_path, channels)
 
+images, masks = split_grid(images, masks, grid_split)
+test_img, test_mask = split_grid(test_img, test_mask, grid_split)
+
 test_img = zca_whitening(test_img, zca_coeff)
 test_mask = test_mask / 255.
 
@@ -124,6 +128,7 @@ for i in range(3):
     t_gen.append(a)
     v_img.append(b)
     v_mask.append(c)
+raise
 def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
     net_lr = math.pow(10,-net_lr)
     net_filters = int(math.pow(2,math.floor(net_filters)+4))

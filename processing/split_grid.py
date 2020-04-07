@@ -1,29 +1,25 @@
-import math
 import numpy as np
-import os
+import matplotlib.pyplot as plt
 
 from PIL import Image
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from whitening import zca_whitening
-import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing.image import array_to_img
 
 def split_grid(images, masks, grid_split):
-    if channels > 1:
-        if grid_split > 0:
-            imgs = imgs.reshape(-1,(2**grid_split),imgs_shape//(2**grid_split),(2**grid_split),imgs_shape//(2**grid_split),channels,1)
-            imgs = np.swapaxes(imgs, 2, 3)
-            imgs = imgs.reshape(-1, imgs_shape//(2**grid_split), imgs_shape//(2**grid_split), channels, 1)
-            masks = masks.reshape((-1,(2**grid_split),256//(2**grid_split), (2**grid_split), 256//(2**grid_split),1))
-            masks = np.swapaxes(masks, 2, 3)
-            masks = masks.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), 1)
-    else:
-        if grid_split > 0:
-            imgs = imgs.reshape(-1,(2**grid_split),imgs_shape//(2**grid_split),(2**grid_split),imgs_shape//(2**grid_split),1)
-            imgs = np.swapaxes(imgs, 2, 3)
-            imgs = imgs.reshape(-1, imgs_shape//(2**grid_split), imgs_shape//(2**grid_split), 1)
-            masks = masks.reshape((-1,(2**grid_split),256//(2**grid_split), (2**grid_split), 256//(2**grid_split),1))
-            masks = np.swapaxes(masks, 2, 3)
-            masks = masks.reshape(-1, 256//(2**grid_split), 256//(2**grid_split), 1)
+    grid_split = 4
 
-    return imgs, masks
+    img_split = []
+    mask_split = []
+
+    for i in range(grid_split):
+        for j in range(grid_split):
+            img_split.append(images[:,64*i:66+64*i,64*j:66+64*j])
+            mask_split.append(masks[:,64*i:64+64*i,64*j:64+64*j])
+
+
+    if np.shape(images)[3] > 1:
+        img_split = np.array(img_split).reshape(-1,66,66,np.shape(images)[3],1)
+    else:
+        img_split = np.array(img_split).reshape(-1,66,66,1)
+    mask_split = np.array(mask_split).reshape(-1,64,64,1)
+
+    return img_split, mask_split
