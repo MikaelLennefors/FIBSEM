@@ -8,8 +8,8 @@ import statistics
 import time
 import math
 
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
-# logging.getLogger('tensorflow').setLevel(logging.FATAL)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
+logging.getLogger('tensorflow').setLevel(logging.FATAL)
 import tensorflow as tf
 
 #from tensorflow.keras.utils import multi_gpu_model
@@ -112,9 +112,9 @@ for i in range(3):
 def evaluate_network(net_lr, net_filters):
     net_lr = math.pow(10,-net_lr)
     net_filters = int(math.pow(2,math.floor(net_filters)+4))
-    #print(net_lr)
-    #print(net_filters)
-    #raise
+    # print(net_lr)
+    # print(net_filters)
+    # raise
     for i in range(3):
         train_gen = t_gen[i]
         val_img = v_img[i]
@@ -131,7 +131,7 @@ def evaluate_network(net_lr, net_filters):
 
 
         earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.001, patience = 100, mode = 'max')
-        earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.5, patience = 30, mode = 'max')
+        earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.5, patience = 3, mode = 'max')
         class PredictionCallback(tf.keras.callbacks.Callback):
             def on_epoch_end(self, epoch, logs={}):
                 predic_mask = self.model.predict(np.expand_dims(test_img[0], axis = 0))
@@ -176,7 +176,7 @@ def evaluate_network(net_lr, net_filters):
                         y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             # i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
@@ -195,8 +195,8 @@ def evaluate_network(net_lr, net_filters):
         m1 = np.mean(mean_benchmark)
         mdev = np.std(mean_benchmark)
     return m1
-test = evaluate_network(2, 4)
-raise
+# test = evaluate_network(4,2)
+
 from bayes_opt import BayesianOptimization
 
 pbounds = {'net_filters': (0.0, 3.0),
