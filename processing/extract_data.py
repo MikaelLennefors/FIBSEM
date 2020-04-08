@@ -3,10 +3,6 @@ import numpy as np
 import os
 
 from PIL import Image
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from whitening import zca_whitening
-import matplotlib.pyplot as plt
-from tensorflow.keras.preprocessing.image import array_to_img
 
 def extract_data(path, channels):
     og_dir = os.listdir(path)

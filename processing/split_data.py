@@ -1,7 +1,7 @@
 import math
 import numpy as np
+import time
 
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from whitening import zca_whitening
 
 def gen_data_split(images, masks, channels = 1, b_size = 180, whitening_coeff = 5e-3, maskgen_args = dict(vertical_flip = True)):
@@ -20,10 +20,17 @@ def gen_data_split(images, masks, channels = 1, b_size = 180, whitening_coeff = 
 
     train_mask = mask_split[0].astype(np.uint8)
 
-
+    start_time = time.time()
     train_images = zca_whitening(train_images, whitening_coeff)
+    stop_time = time.time() - start_time
+    print('train img:\t', stop_time)
+    start_time = time.time()
     val_images = zca_whitening(val_images, whitening_coeff)
+    stop_time = time.time() - start_time
+    print('val img:\t', stop_time)
     val_mask = mask_split[1] / 255.
+
+    from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
     img_datagen = ImageDataGenerator(**maskgen_args)
     seed = 1

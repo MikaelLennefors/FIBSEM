@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from PIL import Image
-from tensorflow.keras.preprocessing.image import array_to_img
 
 def split_grid(images, masks, grid_split):
     grid_split = 4
