@@ -113,8 +113,8 @@ zca_coeff = 5e-2
 images, masks = extract_data(data_path, channels)
 test_img, test_mask = extract_data(test_path, channels)
 
-#images, masks = split_grid(images, masks, grid_split)
-#test_img, test_mask = split_grid(test_img, test_mask, grid_split)
+images, masks = split_grid(images, masks, grid_split)
+test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
 test_img = zca_whitening(test_img, zca_coeff)
 test_mask = test_mask / 255.
@@ -128,7 +128,7 @@ for i in range(3):
     t_gen.append(a)
     v_img.append(b)
     v_mask.append(c)
-#raise
+raise
 def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
     net_lr = math.pow(10,-net_lr)
     net_filters = int(math.pow(2,math.floor(net_filters)+4))

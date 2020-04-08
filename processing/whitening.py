@@ -1,12 +1,15 @@
-import numpy as np
+# import numpy as np
 import time
 #import scipy.linalg
-#import jax.numpy as np
-#import jax.scipy as jsp
+import jax.numpy as np
+# from jax import device_put
+# import jax.scipy as np
 #from numpy.linalg import multi_dot
 def zca_whitening(img, epsilon = 1e-3):
     print("--"*20)
     start_time = time.time()
+    x = np.shape(img)[1]
+    y = np.shape(img)[2]
     channels = np.shape(img)[3]
     if channels > 1:
         img = np.swapaxes(img,2,3)
@@ -14,14 +17,17 @@ def zca_whitening(img, epsilon = 1e-3):
         img = img.reshape(-1,np.shape(img)[2],np.shape(img)[3],1)
     og_shape = np.shape(img)
     stop_time = time.time() - start_time
-    print(stop_time)
+    print('1 reshape\t', stop_time)
+    start_time = time.time()
     img = img.reshape(og_shape[0], -1)
 
     img = img / 255.
 
     img = img - img.mean(axis=0)
+    # img = device_put(img)
     #start_time = time.time()
     co = np.cov(img, rowvar=True)
+    # co = device_put(co)
     #cov_time = time.time() - start_time
     #start_time2 = time.time()
     U, S, V = np.linalg.svd(co)
@@ -29,7 +35,8 @@ def zca_whitening(img, epsilon = 1e-3):
     #print("svd time:",svd_time)
     #print("svd over cov:", svd_time/cov_time)
     stop_time = time.time() - start_time
-    print(stop_time)
+    print('cov+svd\t', stop_time)
+    start_time = time.time()
 
     #start_time = time.time()
     #img_ZCA = multi_dot([U,np.diag(1.0/np.sqrt(S + epsilon)),U.T,img])
@@ -50,12 +57,23 @@ def zca_whitening(img, epsilon = 1e-3):
 
     img_ZCA = img_ZCA.reshape(og_shape)
     stop_time = time.time() - start_time
-    print(stop_time)
+    print('dot\t', stop_time)
+    start_time = time.time()
     if channels > 1:
-        img_ZCA = np.array(np.split(img_ZCA, np.shape(img_ZCA)[0]/channels))
+        # img_ZCA = np.split(img_ZCA, np.shape(img_ZCA)[0]/channels)
+        img_ZCA = img_ZCA.reshape(-1, channels, x, y, 1)
+        stop_time = time.time() - start_time
+        print('split\t', stop_time)
+        # start_time = time.time()
+        # img_ZCA = np.array(img_ZCA)
+        # stop_time = time.time() - start_time
+        # print('to array\t', stop_time)
         img_ZCA = np.swapaxes(img_ZCA,1,2)
+        start_time = time.time()
         img_ZCA = np.swapaxes(img_ZCA,2,3)
+        start_time = time.time()
     stop_time = time.time() - start_time
-    print(stop_time)
+    print('2 reshape\t', stop_time)
+
 
     return img_ZCA
