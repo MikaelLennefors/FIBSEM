@@ -30,107 +30,6 @@ from whitening import zca_whitening
 from split_grid import split_grid
 from keras_augmentation import gen_aug
 
-channels = 1
-
-gpu = 'Xp'
-
-if len(sys.argv) > 1:
-    if int(sys.argv[1]) == 1:
-        gpu = 'V'
-print(gpu)
-if len(sys.argv) > 2:
-    channels = int(sys.argv[2])
-
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
-if gpu == 'Xp':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-else:
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
-
-# while int(os.environ["CUDA_VISIBLE_DEVICES"]) not in [0,1]:
-#    os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
-#
-# channels = int(input("Choose channels, 1, 3, 5 or 7: "))
-# while channels not in [1,3,5,7]:
-#     channels = int(input("Choose channels, 1, 3, 5 or 7: "))
-
-
-if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
-   gpu = 'Xp'
-
-data_path = './data/train_val_data_border_clean/'
-test_path = './data/test_data_border_clean/'
-log_path = './results/{}/log.out'.format(gpu)
-weights_path = './results/{}/weights'.format(gpu)
-pred_path = './results/{}/masks/'.format(gpu)
-callback_path = './results/{}/callback_masks/'.format(gpu)
-
-grid_split = 0
-
-
-NO_OF_EPOCHS = 200
-aug_batch = 180
-max_count = 3
-b_size = 1
-elast_deform = True
-elast_alpha = 2
-elast_sigma = 0.08
-elast_affine_alpha = 0.08
-net_filters = 32
-prop_elastic = 0.05
-net_lr = 1e-5
-net_bin_split = 0.3164
-net_drop = 0.5
-net_activ_fun = 0
-
-
-
-aug_args = dict(
-            vertical_flip = True,
-            horizontal_flip = True,
-            #shear_range = 0.01,
-            #rotation_range = 20,
-            #zoom_range = 0.01,
-            fill_mode = 'reflect'
-        )
-zca_coeff = 5e-2
-# with open('results/{}/results.txt'.format(gpu), 'w') as f:
-#         for key in configurations[0].keys():
-#             f.write('%s\t' % key)
-#         f.write('val_iou\t')
-#         f.write('val_accuracy\t')
-#         f.write('val_TP\t')
-#         f.write('val_TN\t')
-#         f.write('val_FP\t')
-#         f.write('val_FN')
-
-images, masks = extract_data(data_path, channels)
-test_img, test_mask = extract_data(test_path, channels)
-
-# images, masks = split_grid(images, masks, grid_split)
-# test_img, test_mask = split_grid(test_img, test_mask, grid_split)
-
-test_img = zca_whitening(test_img, zca_coeff)
-test_img = np.array(test_img)
-test_mask = test_mask / 255.
-
-t_gen = []
-v_img = []
-v_mask = []
-
-for i in range(3):
-    train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
-    a = gen_aug(train_images, train_mask, aug_args, aug_batch)
-    t_gen.append(a)
-    v_img.append(np.array(b))
-    v_mask.append(c)
-
-
-# if len(sys.argv) <= 3:
-#     print("Disabling debug")
-#     import logging
-#     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
-#     logging.getLogger('tensorflow').setLevel(logging.FATAL)
 
 
 def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
@@ -201,7 +100,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
                         y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             # i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
@@ -221,24 +120,3 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
     # mdev = np.std(mean_benchmark)
     return m1
 # test = evaluate_network(4,2)
-
-
-
-pbounds = {'net_drop': (0.0,0.5),
-    'net_filters': (0.0, 3.0),
-    'net_lr': (3.0, 6.0),
-    'prop_elastic': (0.0, 0.3)
-    }
-
-optimizer = BayesianOptimization(
-    f=evaluate_network,
-    pbounds=pbounds,
-    verbose=2,
-)
-
-start_time = time.time()
-optimizer.maximize(init_points=10, n_iter=100,)
-time_took = time.time() - start_time
-
-# print(f"Total runtime: {hms_string(time_took)}")
-print(optimizer.max)
