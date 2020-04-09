@@ -52,8 +52,8 @@ else:
 if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
    gpu = 'Xp'
 
-data_path = './data/train_val_data_border/'
-test_path = './data/test_data_border/'
+data_path = './data/train_val_data_border_clean/'
+test_path = './data/test_data_border_clean/'
 log_path = './results/{}/log.out'.format(gpu)
 weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
@@ -198,7 +198,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
                         y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             # i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))

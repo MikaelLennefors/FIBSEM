@@ -1,9 +1,11 @@
 from PIL import Image
 import numpy as np
 
-path = '/home/sms/github/unet_data/'
+# path = '/home/sms/github/unet_data/'
+path = '/home/ubuntu/github/FIBSEM/data/'
 
-save_path = '/home/sms/github/unet_data/test_data/'
+# save_path = '/home/sms/github/unet_data/test_data/'
+save_path = '/home/ubuntu/github/FIBSEM/data/clean_data_border/'
 
 
 def read_tiff(path):
@@ -22,13 +24,13 @@ def read_tiff(path):
 
 if __name__ == '__main__':
     #ratio = input("Porositet: ")
-    filename = 'test-volume.tif'
+    filename = 'regions_HPC45.tif'
     file = path + filename
     img = read_tiff(file)
-    #print(np.shape(img))
+
     #img = img[:,:,:,0]
     #img = img[3::7]
-    #img = img[:,64:320:,64:320]
+    img = img[:,63:321:,63:321]
     for i in range(np.shape(img)[0]):
         im = Image.fromarray(img[i,:,:])
-        im.save(save_path + 'image_' + str(i).zfill(2) + '.png')
+        im.save(save_path + 'image45_' + str(i).zfill(3) + '.png')
