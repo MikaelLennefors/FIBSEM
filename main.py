@@ -6,6 +6,10 @@ import sys
 # import statistics
 import time
 import math
+import tensorflow as tf
+from tensorflow.keras.callbacks import *
+from tensorflow.keras.preprocessing.image import array_to_img
+from tensorflow.keras.optimizers import Adam
 
 from bayes_opt import BayesianOptimization
 from PIL import Image
@@ -16,6 +20,7 @@ from unet import unet
 from dunet import D_Unet
 from multiresunet import MultiResUnet
 from nestnet import Nest_Net, bce_dice_loss
+
 sys.path.insert(1, './processing')
 from elastic_deformation import elastic_transform
 from split_data import gen_data_split
@@ -23,6 +28,7 @@ from datetime import datetime
 from extract_data import extract_data
 from whitening import zca_whitening
 from split_grid import split_grid
+from keras_augmentation import gen_aug
 
 channels = 1
 
@@ -97,11 +103,10 @@ zca_coeff = 5e-2
 #         f.write('val_TN\t')
 #         f.write('val_FP\t')
 #         f.write('val_FN')
-cur_time = time.time()
+
 images, masks = extract_data(data_path, channels)
 test_img, test_mask = extract_data(test_path, channels)
-diff_time = time.time() - cur_time
-print('Tid att extrahera bilder: ', diff_time)
+
 # images, masks = split_grid(images, masks, grid_split)
 # test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
@@ -114,7 +119,8 @@ v_img = []
 v_mask = []
 
 for i in range(3):
-    a, b, c = gen_data_split(images, masks, channels = channels, b_size = aug_batch, whitening_coeff = zca_coeff, maskgen_args = aug_args)
+    train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
+    a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
     v_img.append(np.array(b))
     v_mask.append(c)
@@ -125,10 +131,7 @@ for i in range(3):
 #     import logging
 #     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
 #     logging.getLogger('tensorflow').setLevel(logging.FATAL)
-import tensorflow as tf
-from tensorflow.keras.callbacks import *
-from tensorflow.keras.preprocessing.image import array_to_img
-from tensorflow.keras.optimizers import Adam, SGD
+
 
 def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
     mean_benchmark = []
@@ -198,7 +201,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
                         y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
-            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             # i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))

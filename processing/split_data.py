@@ -1,11 +1,9 @@
 import math
 import numpy as np
-import time
 
 from whitening import zca_whitening
 
-def gen_data_split(images, masks, channels = 1, b_size = 180, whitening_coeff = 5e-3, maskgen_args = dict(vertical_flip = True)):
-
+def gen_data_split(images, masks, whitening_coeff = 5e-3):
     n_images = np.shape(images)[0]
 
     image_indices = np.random.permutation(n_images)
@@ -20,34 +18,7 @@ def gen_data_split(images, masks, channels = 1, b_size = 180, whitening_coeff = 
 
     train_mask = mask_split[0].astype(np.uint8)
 
-    start_time = time.time()
     train_images = zca_whitening(train_images, whitening_coeff)
-    stop_time = time.time() - start_time
-    print('train img:\t', stop_time)
-    start_time = time.time()
     val_images = zca_whitening(val_images, whitening_coeff)
-    stop_time = time.time() - start_time
-    print('val img:\t', stop_time)
     val_mask = mask_split[1] / 255.
-
-    from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-    img_datagen = ImageDataGenerator(**maskgen_args)
-    seed = 1
-    mask_generator = img_datagen.flow(train_mask, batch_size=b_size, seed = seed)
-    if channels == 1:
-        img_generator = img_datagen.flow(train_images, batch_size=b_size, seed = seed)
-        train_generator = zip(img_generator, mask_generator)
-    else:
-        img_generator = []
-        for i in range(channels):
-            img_generator.append(img_datagen.flow(train_images[:,:,:,i,:], batch_size=b_size, seed = seed))
-        if channels == 7:
-            train_generator = zip(img_generator[0], img_generator[1], img_generator[2], img_generator[3],
-                img_generator[4], img_generator[5], img_generator[6], mask_generator)
-        elif channels == 5:
-            train_generator = zip(img_generator[0], img_generator[1], img_generator[2], img_generator[3],
-                img_generator[4], mask_generator)
-        elif channels == 3:
-            train_generator = zip(img_generator[0], img_generator[1], img_generator[2], mask_generator)
-    return train_generator, val_images, val_mask
+    return train_images, train_mask, val_images, val_mask
