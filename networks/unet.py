@@ -10,14 +10,16 @@ import losses
 def conv_block_down(prev_layer, n_filters, activation):
     for i in range(2):
         conv = Conv2D(n_filters, 3, padding = 'same', kernel_initializer = 'he_normal')(prev_layer)
-        #prev_layer = BatchNormalization()(conv)
         prev_layer = activation(conv)
+        prev_layer = BatchNormalization()(conv)
 
     return prev_layer
 
 def conv_block_up(prev_layer, concat_layer, n_filters, activation):
 
     up_test = Conv2DTranspose(n_filters, 2, strides=(2, 2), padding='same')(prev_layer)
+    up_test = activation(up_test)
+    up_test = BatchNormalization()(up_test)
     merge = concatenate([concat_layer,up_test], axis = 3)
     output = conv_block_down(merge, n_filters, activation)
 
@@ -36,8 +38,8 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     in_0 = inputs
     if math.ceil(math.log2(input_size)) != math.floor(math.log2(input_size)):
         in_0 = Conv2D(multiple, 3, padding = 'valid', kernel_initializer = 'he_normal')(in_0)
-        #in_0 = BatchNormalization()(in_0)
         in_0 = activation_fun(in_0)
+        in_0 = BatchNormalization()(in_0)
     conv1 = conv_block_down(in_0, multiple, activation_fun)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 

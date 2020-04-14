@@ -72,7 +72,7 @@ grid_split = 2**grid_split
 NO_OF_EPOCHS = 200
 aug_batch = grid_split*grid_split*180
 max_count = 3
-b_size = 1
+b_size = 128
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
@@ -127,7 +127,9 @@ for i in range(3):
         prop = np.sum(train_mask[j])/(255*np.shape(train_mask[j].flatten())[0])
         if prop < 0.3 and random.random() <  0.9-2.5*prop:
             kill_index[i].append(j)
-    test = np.delete(train_mask, kill_index[i], axis = 0)
+    train_images = np.delete(train_images, kill_index[i], axis = 0)
+    train_mask = np.delete(train_mask, kill_index[i], axis = 0)
+    print('new proportion: ',np.sum(train_mask)/(255*np.shape(train_mask.flatten())[0]))
     a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
     v_img.append(np.array(b))
@@ -164,16 +166,17 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
 
         earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = 100, mode = 'max')
         earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.6, patience = 50)
-        # class PredictionCallback(tf.keras.callbacks.Callback):
-        #     def on_epoch_end(self, epoch, logs={}):
-        #         predic_mask = self.model.predict(np.expand_dims(test_img[0], axis = 0))
-        #         testy_mask = np.around(predic_mask).reshape(256,256).astype(np.uint8)*255
+        class PredictionCallback(tf.keras.callbacks.Callback):
+            def on_epoch_end(self, epoch, logs={}):
+                predic_mask = self.model.predict(np.expand_dims(test_img[0], axis = 0))
+                # new_shape = int(np.shape(predic_mask)/gridsplit)
+                testy_mask = np.around(predic_mask).reshape(np.shape(predic_mask)[1],np.shape(predic_mask)[1]).astype(np.uint8)*255
 
-        #         im = Image.fromarray(testy_mask)
-        #         im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
+                im = Image.fromarray(testy_mask)
+                im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
 
 
-        callbacks_list = [earlystopping1, earlystopping2]
+        callbacks_list = [earlystopping1, earlystopping2, PredictionCallback()]
 
         count = 0
         for c in train_gen:
