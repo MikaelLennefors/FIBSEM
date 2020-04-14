@@ -2,10 +2,10 @@ from PIL import Image
 import numpy as np
 
 # path = '/home/sms/github/unet_data/'
-path = '/home/ubuntu/github/FIBSEM/data/'
+path = '../data/'
 
 # save_path = '/home/sms/github/unet_data/test_data/'
-save_path = '/home/ubuntu/github/FIBSEM/data/clean_data_border/'
+save_path = '../data/train_val_data_border_clean/'
 
 
 def read_tiff(path):
@@ -23,8 +23,8 @@ def read_tiff(path):
     return np.array(images)
 
 if __name__ == '__main__':
-    #ratio = input("Porositet: ")
-    filename = 'regions_HPC45.tif'
+    ratio = input("Porositet: ")
+    filename = 'regions_HPC{}.tif'.format(ratio)
     file = path + filename
     img = read_tiff(file)
 
@@ -33,4 +33,4 @@ if __name__ == '__main__':
     img = img[:,63:321:,63:321]
     for i in range(np.shape(img)[0]):
         im = Image.fromarray(img[i,:,:])
-        im.save(save_path + 'image45_' + str(i).zfill(3) + '.png')
+        im.save(save_path + 'image{}_'.format(ratio) + str(i).zfill(3) + '.png')
