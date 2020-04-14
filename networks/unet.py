@@ -1,3 +1,4 @@
+import math
 from tensorflow.keras.models import *
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
@@ -33,7 +34,7 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     inputs = Input((input_size, input_size, 1))
 
     in_0 = inputs
-    if input_size == 258:
+    if math.ceil(math.log2(input_size)) != math.floor(math.log2(input_size)):
         in_0 = Conv2D(multiple, 3, padding = 'valid', kernel_initializer = 'he_normal')(in_0)
         #in_0 = BatchNormalization()(in_0)
         in_0 = activation_fun(in_0)
@@ -70,7 +71,7 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
 
 def main():
 
-    model = unet(input_size = 258)
+    model = unet(input_size = 66)
     print(model.summary())
 
 if __name__ == '__main__':

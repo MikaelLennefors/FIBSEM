@@ -149,7 +149,7 @@ def squeeze_excite_block(input, activation, ratio=16):
 
 def main():
 
-    model = D_Unet(input_size = (258,3))
+    model = D_Unet(input_size = (66,5))
     print(model.summary())
 
 def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, multiple = 32, learning_rate = 1e-4, dout = 0.5, reg_coeff = 0.001):
@@ -177,7 +177,7 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, mul
     conv3d1 = Conv3D(multiple, (3,3,2), padding='valid', kernel_initializer='he_normal')(conv3d1)
     conv3d1 = activation_fun(conv3d1)
 
-    if input_size[0] == 258 and input_size[1] < 7:
+    if math.ceil(math.log2(input_size[0])) != math.floor(math.log2(input_size[0])) and input_size[1] < 7:
         pool3d1 = MaxPooling3D(pool_size = 2)(conv3d1)
     else:
         pool3d1 = MaxPooling3D(pool_size = (2,2,3), strides=(2,2,1))(conv3d1)

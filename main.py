@@ -65,11 +65,12 @@ weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
-grid_split = 0
+grid_split = 2
+grid_split = 2**grid_split
 
 
 NO_OF_EPOCHS = 200
-aug_batch = 180
+aug_batch = grid_split*grid_split*180
 max_count = 3
 b_size = 1
 elast_deform = True
@@ -107,8 +108,8 @@ zca_coeff = 5e-2
 images, masks = extract_data(data_path, channels)
 test_img, test_mask = extract_data(test_path, channels)
 
-# images, masks = split_grid(images, masks, grid_split)
-# test_img, test_mask = split_grid(test_img, test_mask, grid_split)
+images, masks = split_grid(images, masks, grid_split)
+test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
 test_img = zca_whitening(test_img, zca_coeff)
 test_img = np.array(test_img)
@@ -146,10 +147,10 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
         val_mask = v_mask[i]
 
         if channels == 1:
-            input_size = np.shape(val_img)[1]//(2**grid_split)
+            input_size = np.shape(val_img)[1]
             m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
         else:
-            input_size = (np.shape(val_img)[1]//(2**grid_split),channels)
+            input_size = (np.shape(val_img)[1],channels)
             m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
         m.compile(optimizer = Adam(lr = net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy'])
 
@@ -193,7 +194,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
                                 x[j,:,:,k] = im_merge_t
                             else:
                                 x[j,:,:,k] = im_merge_t.reshape(img.shape[0],img.shape[1])
-                        mask = y[j].copy().reshape(256,256)
+                        mask = y[j].copy().reshape(np.shape(train_mask)[1],np.shape(train_mask)[1])
                         seed = np.random.RandomState(randoint)
                         im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
                         #print(np.shape(im_mask_t))
