@@ -118,14 +118,20 @@ test_mask = test_mask / 255.
 t_gen = []
 v_img = []
 v_mask = []
-
+kill_index = {}
 for i in range(3):
+    kill_index[i] = []
     train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
+
+    for j in range(np.shape(train_mask)[0]):
+        prop = np.sum(train_mask[j])/(255*np.shape(train_mask[j].flatten())[0])
+        if prop < 0.3 and random.random() <  0.9-2.5*prop:
+            kill_index[i].append(j)
+    test = np.delete(train_mask, kill_index[i], axis = 0)
     a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
     v_img.append(np.array(b))
     v_mask.append(c)
-
 
 # if len(sys.argv) <= 3:
 #     print("Disabling debug")
