@@ -94,7 +94,9 @@ aug_args = dict(
             #zoom_range = 0.01,
             fill_mode = 'reflect'
         )
+
 zca_coeff = 5e-2
+
 # with open('results/{}/results.txt'.format(gpu), 'w') as f:
 #         for key in configurations[0].keys():
 #             f.write('%s\t' % key)
@@ -111,6 +113,7 @@ test_img, test_mask = extract_data(test_path, channels)
 images, masks = split_grid(images, masks, grid_split)
 test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
+
 test_img = zca_whitening(test_img, zca_coeff)
 test_img = np.array(test_img)
 test_mask = test_mask / 255.
@@ -119,17 +122,39 @@ t_gen = []
 v_img = []
 v_mask = []
 kill_index = {}
+bins = 2
 for i in range(3):
-    kill_index[i] = []
     train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
 
-    for j in range(np.shape(train_mask)[0]):
-        prop = np.sum(train_mask[j])/(255*np.shape(train_mask[j].flatten())[0])
-        if prop < 0.3 and random.random() <  0.9-2.5*prop:
-            kill_index[i].append(j)
-    train_images = np.delete(train_images, kill_index[i], axis = 0)
-    train_mask = np.delete(train_mask, kill_index[i], axis = 0)
-    print('new proportion: ',np.sum(train_mask)/(255*np.shape(train_mask.flatten())[0]))
+    x = np.mean(train_mask, axis = (1,2,3))/255
+    min_pics = np.shape(x)[0]
+    img_poros = {}
+    new_imgs = []
+    new_masks = []
+
+    for i in range(bins):
+        A = np.where(x >= (1/bins)*i)
+        B = np.where(x < (1/bins)*(1+i))
+        if i == (bins-1):
+            B = np.where(x <= (1/bins)*(1+i))
+        img_poros[i] = np.intersect1d(A, B)
+        min_pics = min(len(img_poros[i]), min_pics)
+
+    for i in range(bins):
+        curr_img = img_poros[i]
+        if np.shape(curr_img)[0] != min_pics:
+            indices = random.sample(list(curr_img), min_pics)
+            new_imgs.append(train_images[indices])
+            new_masks.append(train_mask[indices])
+        else:
+            new_imgs.append(train_images[curr_img])
+            new_masks.append(train_mask[curr_img])
+    train_images = np.array(new_imgs)
+    train_mask = np.array(new_masks)
+    train_images = train_images.reshape(-1, np.shape(train_images)[2], np.shape(train_images)[3], 1)
+    train_mask = train_mask.reshape(-1, np.shape(train_mask)[2], np.shape(train_mask)[3], 1)
+    print(np.shape(train_images))
+    print(np.shape(train_mask))
     a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
     v_img.append(np.array(b))
