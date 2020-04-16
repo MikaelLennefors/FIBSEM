@@ -106,15 +106,14 @@ zca_coeff = 5e-2
 #         f.write('val_TN\t')
 #         f.write('val_FP\t')
 #         f.write('val_FN')
-
 images, masks = extract_data(data_path, channels)
 test_img, test_mask = extract_data(test_path, channels)
 
 images, masks = split_grid(images, masks, grid_split)
 test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
-
 test_img = zca_whitening(test_img, zca_coeff)
+
 test_img = np.array(test_img)
 test_mask = test_mask / 255.
 
@@ -123,34 +122,55 @@ v_img = []
 v_mask = []
 bins = 2
 for i in range(3):
+    print("nu går vi in i gen_data_split nr", i)
     train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
-    print(np.shape(train_images))
+
+    test = np.linspace(0, 100, 101, dtype=np.uint8)
+    print(train_images[test])
+    print(test)
+
     raise
-    x = np.mean(train_mask, axis = (1,2,3))/255
+
+    print(np.shape(train_images))
+
+    x = np.mean(train_mask, axis = (1,2,-1))/255
     min_pics = np.shape(x)[0]
     img_poros = {}
     new_imgs = []
     new_masks = []
+    now_time = time.time()
+    for j in range(bins):
+        A = np.where(x >= (1/bins)*j)
+        B = np.where(x < (1/bins)*(1+j))
+        if j == (bins-1):
+            B = np.where(x <= (1/bins)*(1+j))
+        img_poros[j] = np.intersect1d(A, B)
+        min_pics = np.min([len(img_poros[j]), min_pics])
 
-    for i in range(bins):
-        A = np.where(x >= (1/bins)*i)
-        B = np.where(x < (1/bins)*(1+i))
-        if i == (bins-1):
-            B = np.where(x <= (1/bins)*(1+i))
-        img_poros[i] = np.intersect1d(A, B)
-        min_pics = min(len(img_poros[i]), min_pics)
-
-    for i in range(bins):
-        curr_img = img_poros[i]
+    for j in range(bins):
+        curr_img = img_poros[j]
         if np.shape(curr_img)[0] != min_pics:
+            print("0", now_time - time.time())
             indices = random.sample(list(curr_img), min_pics)
-            new_imgs.append(train_images[indices])
-            new_masks.append(train_mask[indices])
+            print("1", now_time - time.time())
+            new_imgs.append(indices)
+            print("2", now_time - time.time())
+            new_masks.append(indices)
+            print("3", now_time - time.time())
         else:
-            new_imgs.append(train_images[curr_img])
-            new_masks.append(train_mask[curr_img])
-    train_images = np.array(new_imgs)
-    train_mask = np.array(new_masks)
+            new_imgs.append(curr_img)
+            new_masks.append(curr_img)
+    print("4", now_time - time.time())
+    new_imgs = np.array(new_imgs)
+    new_imgs = new_imgs.flatten()
+    print(new_imgs)
+    raise
+    print(np.shape(train_images))
+    print(np.shape(new_imgs))
+    train_images = train_images[new_imgs]
+    print("5", now_time - time.time())
+    train_mask = train_masks[new_masks]
+    print("6", now_time - time.time())
     train_images = train_images.reshape(-1, np.shape(train_images)[2], np.shape(train_images)[3], 1)
     train_mask = train_mask.reshape(-1, np.shape(train_mask)[2], np.shape(train_mask)[3], 1)
     print(np.shape(train_images))
