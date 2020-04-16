@@ -171,6 +171,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
     net_filters = int(math.pow(2,math.floor(net_filters)+4))
+    print('drop: ', net_drop, '\nfilters: ', net_filters, '\nlr: ', net_lr, '\nprop el: ', prop_elastic)
     # print(net_lr)
     # print(net_filters)
     # raise
@@ -261,7 +262,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
 
 pbounds = {'net_drop': (0.0,0.5),
     'net_filters': (0.0, 3.0),
-    'net_lr': (3.0, 6.0),
+    'net_lr': (1.0, 3.0),
     'prop_elastic': (0.0, 0.3)
     }
 
