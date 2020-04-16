@@ -121,11 +121,11 @@ test_mask = test_mask / 255.
 t_gen = []
 v_img = []
 v_mask = []
-kill_index = {}
 bins = 2
 for i in range(3):
     train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
-
+    print(np.shape(train_images))
+    raise
     x = np.mean(train_mask, axis = (1,2,3))/255
     min_pics = np.shape(x)[0]
     img_poros = {}
