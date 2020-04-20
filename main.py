@@ -112,7 +112,7 @@ test_img, test_mask = extract_data(test_path, channels)
 images, masks = split_grid(images, masks, grid_split)
 test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
-test_img = zca_whitening(test_img, zca_coeff)
+#test_img = zca_whitening(test_img, zca_coeff)
 
 test_img = np.array(test_img)
 test_mask = test_mask / 255.
@@ -121,17 +121,13 @@ t_gen = []
 v_img = []
 v_mask = []
 bins = 2
+
+
 for i in range(3):
     print("nu går vi in i gen_data_split nr", i)
     train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
 
     test = np.linspace(0, 100, 101, dtype=np.uint8)
-    print(train_images[test])
-    print(test)
-
-    raise
-
-    print(np.shape(train_images))
 
     x = np.mean(train_mask, axis = (1,2,-1))/255
     min_pics = np.shape(x)[0]
@@ -150,33 +146,28 @@ for i in range(3):
     for j in range(bins):
         curr_img = img_poros[j]
         if np.shape(curr_img)[0] != min_pics:
-            print("0", now_time - time.time())
             indices = random.sample(list(curr_img), min_pics)
-            print("1", now_time - time.time())
             new_imgs.append(indices)
-            print("2", now_time - time.time())
             new_masks.append(indices)
-            print("3", now_time - time.time())
         else:
             new_imgs.append(curr_img)
             new_masks.append(curr_img)
-    print("4", now_time - time.time())
+
     new_imgs = np.array(new_imgs)
     new_imgs = new_imgs.flatten()
-    print(new_imgs)
-    raise
-    print(np.shape(train_images))
-    print(np.shape(new_imgs))
+    new_masks = np.array(new_masks)
+    new_masks = new_masks.flatten()
     train_images = train_images[new_imgs]
-    print("5", now_time - time.time())
-    train_mask = train_masks[new_masks]
-    print("6", now_time - time.time())
-    train_images = train_images.reshape(-1, np.shape(train_images)[2], np.shape(train_images)[3], 1)
-    train_mask = train_mask.reshape(-1, np.shape(train_mask)[2], np.shape(train_mask)[3], 1)
+    train_mask = train_mask[new_masks]
+    print(np.mean(train_mask)/255)
+    train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], 1)
+    train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
     print(np.shape(train_images))
     print(np.shape(train_mask))
+    train_images = zca_whitening(train_images, zca_coeff)
     a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
+    b = zca_whitening(b)
     v_img.append(np.array(b))
     v_mask.append(c)
 
@@ -222,7 +213,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
                 im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
 
 
-        callbacks_list = [earlystopping1, earlystopping2, PredictionCallback()]
+        callbacks_list = [earlystopping1, earlystopping2]
 
         count = 0
         for c in train_gen:
