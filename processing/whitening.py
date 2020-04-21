@@ -1,4 +1,3 @@
-# import numpy as np
 import jax.numpy as np
 from jax import jit
 import time

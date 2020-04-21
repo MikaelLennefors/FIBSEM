@@ -11,8 +11,8 @@ def split_grid(images, masks, grid_split):
     mask_split = []
 
     n_patches = 30
-    rows = np.sort(random.sample(range(0, 192), n_patches))
-    cols = np.sort(random.sample(range(0, 192), n_patches))
+    rows = np.sort(random.sample(range(0, 256 - img_shape), n_patches))
+    cols = np.sort(random.sample(range(0, 256 - img_shape), n_patches))
 
     for i,j in zip(rows, cols):
         img_split.append(images[:,
