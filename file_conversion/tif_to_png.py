@@ -1,36 +1,40 @@
 from PIL import Image
 import numpy as np
+import matplotlib.pyplot as plt
+import cv2
+from libtiff import TIFF, TIFFfile
+path = '/home/sms/github/unet_data/'
+# path = '../data/'
 
-# path = '/home/sms/github/unet_data/'
-path = '../data/'
-
-# save_path = '/home/sms/github/unet_data/test_data/'
+save_path = '/home/sms/github/unet_data/test_data/'
 save_path = '../data/train_val_data_border_clean/'
 
 
 def read_tiff(path):
-    img = Image.open(path)
+    img1 = TIFF.open(path)
     images = []
-    n_images = img.n_frames
-    for i in range(n_images):
-        try:
-            img.seek(i)
-            images.append(np.array(img))
+    for image in img1.iter_images():
+        tmp = np.around(image*(255/65535))
+        images.append(tmp)
 
-        except EOFError:
-            break
-
-    return np.array(images)
+    return images
 
 if __name__ == '__main__':
     ratio = input("Porositet: ")
     filename = 'regions_HPC{}.tif'.format(ratio)
     file = path + filename
     img = read_tiff(file)
+    img64 = np.array([])
+    print(np.shape(img))
+    print(np.min(img[38]))
 
-    #img = img[:,:,:,0]
-    #img = img[3::7]
-    img = img[:,63:321:,63:321]
-    for i in range(np.shape(img)[0]):
-        im = Image.fromarray(img[i,:,:])
-        im.save(save_path + 'image{}_'.format(ratio) + str(i).zfill(3) + '.png')
+    patch_size = 64
+    loop_end_patch = np.shape(img)[1] - patch_size
+
+    for image in range(np.shape(img)[0]):
+        curr_img = img[image]
+        for rows in range(loop_end_patch):
+            for col in range(loop_end_patch):
+                tmp = curr_img[rows:rows+patch_size,col:col+patch_size]
+                print(tmp)
+                print(np.shape(tmp))
