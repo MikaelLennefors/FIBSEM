@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import *
 from tensorflow.keras.preprocessing.image import array_to_img
 from tensorflow.keras.optimizers import Adam
-
+import matplotlib.pyplot as plt
 from bayes_opt import BayesianOptimization
 from PIL import Image
 
@@ -65,7 +65,7 @@ weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
-grid_split = 2
+grid_split = 1
 grid_split = 2**grid_split
 
 
@@ -164,7 +164,7 @@ for i in range(3):
     train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
     print(np.shape(train_images))
     print(np.shape(train_mask))
-    train_images = zca_whitening(train_images, zca_coeff)
+    #train_images = zca_whitening(train_images, zca_coeff)
     a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
     b = zca_whitening(b)
@@ -248,6 +248,17 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
                         y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
+            # plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
+            plt.subplot(1, 3, 1)
+            plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
+            plt.subplot(1, 3, 2)
+            plt.imshow(array_to_img(y[0]))
+            plt.subplot(1, 3, 3)
+            plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
+            plt.imshow(array_to_img(y[0]), alpha = 0.2)
+
+
+            plt.show()
             results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
