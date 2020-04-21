@@ -70,7 +70,6 @@ grid_split = 2**grid_split
 
 
 NO_OF_EPOCHS = 200
-aug_batch = grid_split*grid_split*180
 max_count = 3
 b_size = 128
 elast_deform = True
@@ -113,8 +112,8 @@ images, masks = split_grid(images, masks, grid_split)
 test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
 test_img = zca_whitening(test_img, zca_coeff)
-
 test_img = np.array(test_img)
+
 test_mask = test_mask / 255.
 
 t_gen = []
@@ -122,18 +121,16 @@ v_img = []
 v_mask = []
 bins = 2
 
-
+resampling_const = 2
 for i in range(3):
     print("nu går vi in i gen_data_split nr", i)
     train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
-
     test = np.linspace(0, 100, 101, dtype=np.uint8)
 
     x = np.mean(train_mask, axis = (1,2,-1))/255
     min_pics = np.shape(x)[0]
     img_poros = {}
-    new_imgs = []
-    new_masks = []
+    new_indices = []
     now_time = time.time()
     for j in range(bins):
         A = np.where(x >= (1/bins)*j)
@@ -142,29 +139,25 @@ for i in range(3):
             B = np.where(x <= (1/bins)*(1+j))
         img_poros[j] = np.intersect1d(A, B)
         min_pics = np.min([len(img_poros[j]), min_pics])
+    min_pics = resampling_const*min_pics
 
     for j in range(bins):
         curr_img = img_poros[j]
-        if np.shape(curr_img)[0] != min_pics:
+        if np.shape(curr_img)[0] != min_pics / resampling_const:
             indices = random.sample(list(curr_img), min_pics)
-            new_imgs.append(indices)
-            new_masks.append(indices)
+            new_indices.extend(indices)
         else:
-            new_imgs.append(curr_img)
-            new_masks.append(curr_img)
-
-    new_imgs = np.array(new_imgs)
-    new_imgs = new_imgs.flatten()
-    new_masks = np.array(new_masks)
-    new_masks = new_masks.flatten()
-    train_images = train_images[new_imgs]
-    train_mask = train_mask[new_masks]
+            new_indices.extend(np.repeat(curr_img, resampling_const))
+    new_indices = np.array(new_indices)
+    train_images = train_images[new_indices]
+    train_mask = train_mask[new_indices]
     print(np.mean(train_mask)/255)
     train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], 1)
     train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
     print(np.shape(train_images))
     print(np.shape(train_mask))
     train_images = zca_whitening(train_images, zca_coeff)
+    aug_batch = np.shape(train_images)[0]
     a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
     b = zca_whitening(b)
@@ -181,7 +174,7 @@ for i in range(3):
 def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
-    net_filters = int(math.pow(2,math.floor(net_filters)+4))
+    net_filters = int(math.pow(2,math.floor(net_filters)))
     print('drop: ', net_drop, '\nfilters: ', net_filters, '\nlr: ', net_lr, '\nprop el: ', prop_elastic)
     # print(net_lr)
     # print(net_filters)
@@ -213,7 +206,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
                 im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
 
 
-        callbacks_list = [earlystopping1, earlystopping2]
+        callbacks_list = [earlystopping1, earlystopping2, PredictionCallback()]
 
         count = 0
         for c in train_gen:
@@ -228,24 +221,24 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
             x = np.swapaxes(x,2,3)
             if np.shape(x)[3] == 1:
                 x = np.squeeze(x, axis = 3)
-            if elast_deform == True:
-                for j in range(np.shape(x)[0]):
-                    if random.random() < prop_elastic:
-                        randoint = random.randint(0, 1e3)
-                        for k in range(channels):
-                            seed = np.random.RandomState(randoint)
-                            img = x[j,:,:,k]
-                            im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
-                            if channels > 1:
-                                x[j,:,:,k] = im_merge_t
-                            else:
-                                x[j,:,:,k] = im_merge_t.reshape(img.shape[0],img.shape[1])
-                        mask = y[j].copy().reshape(np.shape(train_mask)[1],np.shape(train_mask)[1])
-                        seed = np.random.RandomState(randoint)
-                        im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
-                        #print(np.shape(im_mask_t))
-                        # im_mask_t = im_merge_t[...,0]
-                        y[j] = im_mask_t#.reshape(256,256,1)
+            # if elast_deform == True:
+            #     for j in range(np.shape(x)[0]):
+            #         if random.random() < prop_elastic:
+            #             randoint = random.randint(0, 1e3)
+            #             for k in range(channels):
+            #                 seed = np.random.RandomState(randoint)
+            #                 img = x[j,:,:,k]
+            #                 im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
+            #                 if channels > 1:
+            #                     x[j,:,:,k] = im_merge_t
+            #                 else:
+            #                     x[j,:,:,k] = im_merge_t.reshape(img.shape[0],img.shape[1])
+            #             mask = y[j].copy().reshape(np.shape(train_mask)[1],np.shape(train_mask)[1])
+            #             seed = np.random.RandomState(randoint)
+            #             im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
+            #             #print(np.shape(im_mask_t))
+            #             # im_mask_t = im_merge_t[...,0]
+            #             y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
             # plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
@@ -271,6 +264,8 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
             #print(max_count - count)
             if count >= max_count:
                 break
+        print(np.shape(test_img))
+        print(np.shape(test_mask))
         pred = m.evaluate(test_img, test_mask, verbose = 0)
         score = pred[1]
 
@@ -282,10 +277,10 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
 
 
 
-pbounds = {'net_drop': (0.0,0.5),
-    'net_filters': (0.0, 3.0),
-    'net_lr': (1.0, 3.0),
-    'prop_elastic': (0.0, 0.3)
+pbounds = {'net_drop': (0.4,0.5),
+    'net_filters': (5.0, 6.0),
+    'net_lr': (3.7, 4.6),
+    'prop_elastic': (0.0, 0.2)
     }
 
 optimizer = BayesianOptimization(
