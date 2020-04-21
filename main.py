@@ -112,7 +112,7 @@ test_img, test_mask = extract_data(test_path, channels)
 images, masks = split_grid(images, masks, grid_split)
 test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
-#test_img = zca_whitening(test_img, zca_coeff)
+test_img = zca_whitening(test_img, zca_coeff)
 
 test_img = np.array(test_img)
 test_mask = test_mask / 255.
@@ -164,7 +164,7 @@ for i in range(3):
     train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
     print(np.shape(train_images))
     print(np.shape(train_mask))
-    #train_images = zca_whitening(train_images, zca_coeff)
+    train_images = zca_whitening(train_images, zca_coeff)
     a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
     b = zca_whitening(b)
