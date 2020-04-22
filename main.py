@@ -65,13 +65,13 @@ weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
-grid_split = 1
+grid_split = 0
 grid_split = 2**grid_split
 
 
 NO_OF_EPOCHS = 200
 max_count = 3
-b_size = 128
+b_size = 1
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
@@ -107,9 +107,9 @@ zca_coeff = 5e-2
 #         f.write('val_FN')
 images, masks = extract_data(data_path, channels)
 test_img, test_mask = extract_data(test_path, channels)
-
-images, masks = split_grid(images, masks, grid_split)
-test_img, test_mask = split_grid(test_img, test_mask, grid_split)
+if grid_split > 1:
+    images, masks = split_grid(images, masks, grid_split)
+    test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
 test_img = zca_whitening(test_img, zca_coeff)
 test_img = np.array(test_img)
@@ -123,35 +123,32 @@ bins = 2
 
 resampling_const = 2
 for i in range(3):
-    print("nu går vi in i gen_data_split nr", i)
+    print("nu går vi in i gen_data_split nr", i+1)
     train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
-    test = np.linspace(0, 100, 101, dtype=np.uint8)
+    if grid_split > 0:
+        x = np.mean(train_mask, axis = (1,2,-1))/255
+        min_pics = np.shape(x)[0]
+        img_poros = {}
+        new_indices = []
+        for j in range(bins):
+            A = np.where(x >= (1/bins)*j)
+            B = np.where(x < (1/bins)*(1+j))
+            if j == (bins-1):
+                B = np.where(x <= (1/bins)*(1+j))
+            img_poros[j] = np.intersect1d(A, B)
+            min_pics = np.min([len(img_poros[j]), min_pics])
+        min_pics = resampling_const*min_pics
 
-    x = np.mean(train_mask, axis = (1,2,-1))/255
-    min_pics = np.shape(x)[0]
-    img_poros = {}
-    new_indices = []
-    now_time = time.time()
-    for j in range(bins):
-        A = np.where(x >= (1/bins)*j)
-        B = np.where(x < (1/bins)*(1+j))
-        if j == (bins-1):
-            B = np.where(x <= (1/bins)*(1+j))
-        img_poros[j] = np.intersect1d(A, B)
-        min_pics = np.min([len(img_poros[j]), min_pics])
-    min_pics = resampling_const*min_pics
-
-    for j in range(bins):
-        curr_img = img_poros[j]
-        if np.shape(curr_img)[0] != min_pics / resampling_const:
-            indices = random.sample(list(curr_img), min_pics)
-            new_indices.extend(indices)
-        else:
-            new_indices.extend(np.repeat(curr_img, resampling_const))
-    new_indices = np.array(new_indices)
-    train_images = train_images[new_indices]
-    train_mask = train_mask[new_indices]
-    print(np.mean(train_mask)/255)
+        for j in range(bins):
+            curr_img = img_poros[j]
+            if np.shape(curr_img)[0] != min_pics / resampling_const:
+                indices = random.sample(list(curr_img), min_pics)
+                new_indices.extend(indices)
+            else:
+                new_indices.extend(np.repeat(curr_img, resampling_const))
+        new_indices = np.array(new_indices)
+        train_images = train_images[new_indices]
+        train_mask = train_mask[new_indices]
     train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], 1)
     train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
     print(np.shape(train_images))
@@ -163,13 +160,6 @@ for i in range(3):
     b = zca_whitening(b)
     v_img.append(np.array(b))
     v_mask.append(c)
-
-# if len(sys.argv) <= 3:
-#     print("Disabling debug")
-#     import logging
-#     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
-#     logging.getLogger('tensorflow').setLevel(logging.FATAL)
-
 
 def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
     mean_benchmark = []
@@ -243,12 +233,12 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
 
             # plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
             plt.subplot(1, 3, 1)
-            plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
+            plt.imshow(array_to_img(val_img[0]), vmin = 0, vmax = 255, cmap = 'gray')
             plt.subplot(1, 3, 2)
-            plt.imshow(array_to_img(y[0]))
+            plt.imshow(array_to_img(val_mask[0]))
             plt.subplot(1, 3, 3)
-            plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
-            plt.imshow(array_to_img(y[0]), alpha = 0.2)
+            plt.imshow(array_to_img(val_img[0]), vmin = 0, vmax = 255, cmap = 'gray')
+            plt.imshow(array_to_img(val_mask[0]), alpha = 0.2)
 
 
             plt.show()
