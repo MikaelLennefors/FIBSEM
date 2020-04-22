@@ -4,23 +4,25 @@ import random
 
 from PIL import Image
 
-def split_grid(images, masks, grid_split):
+def split_grid(images, masks, grid_split, test_set = False):
     img_shape = int(np.shape(masks)[1]/grid_split)
 
     img_split = []
     mask_split = []
 
-    n_patches = 30
-    rows = np.sort(random.sample(range(0, 256 - img_shape), n_patches))
-    cols = np.sort(random.sample(range(0, 256 - img_shape), n_patches))
+    if test_set:
+        n_patches = grid_split
+        rows = np.linspace(0,256 - img_shape, grid_split)
+        rows = rows.astype(int)
+        cols = rows
+    else:
+        n_patches = 30
+        rows = np.sort(random.sample(range(0, 256 - img_shape), n_patches))
+        cols = np.sort(random.sample(range(0, 256 - img_shape), n_patches))
 
     for i,j in zip(rows, cols):
-        img_split.append(images[:,
-                                i:img_shape+2+i,
-                                j:img_shape+2+j])
-        mask_split.append(masks[:,
-                                i:img_shape+i,
-                                j:img_shape+j])
+        img_split.append(images[:, i:img_shape+2+i, j:img_shape+2+j])
+        mask_split.append(masks[:, i:img_shape+i, j:img_shape+j])
 
     if np.shape(images)[3] > 1:
         img_split = np.array(img_split).reshape(-1,img_shape+2,img_shape+2,np.shape(images)[3],1)
