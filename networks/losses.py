@@ -24,7 +24,7 @@ def create_weighted_binary_crossentropy(zero_weight, one_weight):
         weight_vector = y_true * one_weight + (1. - y_true) * zero_weight
         weighted_b_ce = weight_vector * b_ce
 
-        return (weighted_b_ce + jaccard_distance(y_true, y_pred))/2
+        return weighted_b_ce
 
     return weighted_binary_crossentropy
 

@@ -47,14 +47,6 @@ if gpu == 'Xp':
 else:
     os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
-# while int(os.environ["CUDA_VISIBLE_DEVICES"]) not in [0,1]:
-#    os.environ["CUDA_VISIBLE_DEVICES"] = input("Choose GPU, 0 for Xp, 1 for V: ")
-#
-# channels = int(input("Choose channels, 1, 3, 5 or 7: "))
-# while channels not in [1,3,5,7]:
-#     channels = int(input("Choose channels, 1, 3, 5 or 7: "))
-
-
 if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
    gpu = 'Xp'
 
@@ -112,7 +104,6 @@ if grid_split > 1:
     test_img, test_mask = split_grid(test_img, test_mask, grid_split)
 
 test_img = zca_whitening(test_img, zca_coeff)
-test_img = np.array(test_img)
 
 test_mask = test_mask / 255.
 
@@ -125,7 +116,7 @@ resampling_const = 2
 for i in range(3):
     print("nu går vi in i gen_data_split nr", i+1)
     train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
-    if grid_split > 0:
+    if grid_split > 1:
         x = np.mean(train_mask, axis = (1,2,-1))/255
         min_pics = np.shape(x)[0]
         img_poros = {}
@@ -154,21 +145,20 @@ for i in range(3):
     print(np.shape(train_images))
     print(np.shape(train_mask))
     train_images = zca_whitening(train_images, zca_coeff)
+
     aug_batch = np.shape(train_images)[0]
     a = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(a)
     b = zca_whitening(b)
-    v_img.append(np.array(b))
+    v_img.append(b)
     v_mask.append(c)
 
 def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
+    zero_weight = np.mean(train_mask) / 255.
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
     net_filters = int(math.pow(2,math.floor(net_filters)))
     print('drop: ', net_drop, '\nfilters: ', net_filters, '\nlr: ', net_lr, '\nprop el: ', prop_elastic)
-    # print(net_lr)
-    # print(net_filters)
-    # raise
     for i in range(3):
         train_gen = t_gen[i]
         val_img = v_img[i]
@@ -180,7 +170,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
         else:
             input_size = (np.shape(val_img)[1],channels)
             m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-        m.compile(optimizer = Adam(lr = net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy'])
+        m.compile(optimizer = Adam(lr = net_lr), loss = losses.create_weighted_binary_crossentropy(zero_weight, 1 - zero_weight), metrics = [losses.iou_coef, 'accuracy'])
 
 
 
@@ -231,6 +221,11 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
             #             y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
+            print(np.max(x[0]))
+            print(np.max(y[0]))
+            print(np.max(val_img[0]))
+            print(np.max(val_mask[0]))
+
             # plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
             plt.subplot(1, 3, 1)
             plt.imshow(array_to_img(val_img[0]), vmin = 0, vmax = 255, cmap = 'gray')
@@ -269,7 +264,7 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
 
 pbounds = {'net_drop': (0.4,0.5),
     'net_filters': (5.0, 6.0),
-    'net_lr': (3.7, 4.6),
+    'net_lr': (3.7, 4.3),
     'prop_elastic': (0.0, 0.2)
     }
 
