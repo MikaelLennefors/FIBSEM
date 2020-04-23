@@ -101,7 +101,7 @@ images, masks = extract_data(data_path, channels)
 test_img, test_mask = extract_data(test_path, channels)
 if grid_split > 1:
     images, masks = split_grid(images, masks, grid_split)
-    test_img, test_mask = split_grid(test_img, test_mask, grid_split)
+    test_img, test_mask = split_grid(test_img, test_mask, grid_split, test_set = True)
 
 test_img = zca_whitening(test_img, zca_coeff)
 
@@ -115,7 +115,7 @@ bins = 2
 resampling_const = 2
 for i in range(3):
     print("nu går vi in i gen_data_split nr", i+1)
-    train_images, train_mask, b, c = gen_data_split(images, masks, whitening_coeff = zca_coeff)
+    train_images, train_mask, val_images, val_mask = gen_data_split(images, masks, whitening_coeff = zca_coeff)
     if grid_split > 1:
         x = np.mean(train_mask, axis = (1,2,-1))/255
         min_pics = np.shape(x)[0]
@@ -147,14 +147,15 @@ for i in range(3):
     train_images = zca_whitening(train_images, zca_coeff)
 
     aug_batch = np.shape(train_images)[0]
-    a = gen_aug(train_images, train_mask, aug_args, aug_batch)
-    t_gen.append(a)
-    b = zca_whitening(b)
-    v_img.append(b)
-    v_mask.append(c)
+    train_gen = gen_aug(train_images, train_mask, aug_args, aug_batch)
+    t_gen.append(train_gen)
+    val_images = zca_whitening(val_images, zca_coeff)
+    v_img.append(val_images)
+    v_mask.append(val_mask)
 
 def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
     zero_weight = np.mean(train_mask) / 255.
+    print(zero_weight)
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
     net_filters = int(math.pow(2,math.floor(net_filters)))
@@ -221,19 +222,14 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
             #             y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
-            print(np.max(x[0]))
-            print(np.max(y[0]))
-            print(np.max(val_img[0]))
-            print(np.max(val_mask[0]))
-
             # plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
             plt.subplot(1, 3, 1)
-            plt.imshow(array_to_img(val_img[0]), vmin = 0, vmax = 255, cmap = 'gray')
+            plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
             plt.subplot(1, 3, 2)
-            plt.imshow(array_to_img(val_mask[0]))
+            plt.imshow(array_to_img(y[0]))
             plt.subplot(1, 3, 3)
-            plt.imshow(array_to_img(val_img[0]), vmin = 0, vmax = 255, cmap = 'gray')
-            plt.imshow(array_to_img(val_mask[0]), alpha = 0.2)
+            plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
+            plt.imshow(array_to_img(y[0]), alpha = 0.2)
 
 
             plt.show()
@@ -255,13 +251,16 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
         score = pred[1]
 
         mean_benchmark.append(score)
-    m1 = np.mean(mean_benchmark)
+    m1 = np.max(mean_benchmark)
     # mdev = np.std(mean_benchmark)
     return m1
 # test = evaluate_network(4,2)
 
 
-
+bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0, 1)},
+        {'name': 'net_filters', 'type': 'continuous', 'domain': (0, 5)},
+        {'name': 'net_lr', 'type': 'discrete', 'domain': (1, 50)},
+        {'name': 'prop_elastic', 'type': 'continuous', 'domain': (1, 300)}]
 pbounds = {'net_drop': (0.4,0.5),
     'net_filters': (5.0, 6.0),
     'net_lr': (3.7, 4.3),

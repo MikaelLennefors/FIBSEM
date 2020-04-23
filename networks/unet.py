@@ -16,7 +16,8 @@ def conv_block_down(prev_layer, n_filters, activation):
     return prev_layer
 
 def conv_block_up(prev_layer, concat_layer, n_filters, activation):
-    up_test = UpSampling2D()(prev_layer)
+    up_test = Conv2D(n_filters, 2, padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D()(prev_layer))
+    up_test = activation(up_test)
     # up_test = Conv2DTranspose(n_filters, 2, strides=(2, 2), padding='same')(prev_layer)
     # up_test = BatchNormalization()(up_test)
     # up_test = activation(up_test)
@@ -32,7 +33,6 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
        activation_fun = elu
     else:
        activation_fun = losses.RReLU()
-
     inputs = Input((input_size, input_size, 1))
 
     in_0 = inputs
@@ -60,9 +60,11 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     up7 = conv_block_up(up6, conv3, 4*multiple, activation_fun)
     up8 = conv_block_up(up7, conv2, 2*multiple, activation_fun)
     up9 = conv_block_up(up8, conv1, multiple, activation_fun)
+    conv9 = Conv2D(2, 3, padding = 'same', kernel_initializer = 'he_normal')(up9)
+    act9 = activation_fun(conv9)
     #conv9 = conv_block_down(up9, multiple, activation_fun)
     #conv9 = BatchNormalization()(conv9)
-    conv10 = Conv2D(1, 1, activation = 'sigmoid')(up9)
+    conv10 = Conv2D(1, 1, activation = 'sigmoid')(act9)
 
     model = Model(inputs = inputs, outputs = conv10)
 
