@@ -13,34 +13,44 @@ test_path = '../data/test_data_border_clean/'
 
 sns.set(color_codes=True)
 
-def vis_data_dist(channels = 7):
+def vis_data_dist(channels = 1):
     images, masks = extract_data(data_path, channels)
     test_img, test_mask = extract_data(test_path, channels)
+    print(np.shape(images))
+    print(np.shape(masks))
 
-    img_train = images[0,:,:,0]
-    mask_train = masks[0,:,:,0]
-    indices_train = np.nonzero(mask_train)
-    np.add.at(indices_train[0], range(0,len(indices_train[0])), 1)
-    np.add.at(indices_train[1], range(0,len(indices_train[0])), 1)
-    por_train = img_train[indices_train]
-    bakgrund_train = np.delete(img_train,indices_train)
+    # img_train = images[:,:,:,:]
+    # mask_train = masks[:,:,:,:]
+    # indices = np.zeros
 
-    mu_por_train = por_train.mean()
-    median_por_train = np.median(por_train)
-    sigma_por_train = por_train.std()
-    textstr_por_train = '\n'.join((
-        r'$\mu=%.2f$' % (mu_por_train, ),
-        r'$\mathrm{median}=%.2f$' % (median_por_train, ),
-        r'$\sigma=%.2f$' % (sigma_por_train, )))
+    for pic in range(masks.shape[0]):
+        indices = np.nonzero(masks[pic,:,:,0])
+        np.add.at(indices[0], range(0,len(indices[0])), 1)
+        np.add.at(indices[1], range(0,len(indices[1])), 1)
+        print(np.shape(indices))
+        # indices = np.nonzero(mask_train)
+        # np.add.at(indices_train[0], range(0,len(indices_train[0])), 1)
+        # np.add.at(indices_train[1], range(0,len(indices_train[0])), 1)
+        por = images[pic,indices]
+        bakgrund = np.delete(images[pic],indices)
 
-    mu_bak_train = bakgrund_train.mean()
-    median_bak_train = np.median(bakgrund_train)
-    sigma_bak_train = bakgrund_train.std()
-    textstr_bak_train = '\n'.join((
-        r'$\mu=%.2f$' % (mu_bak_train, ),
-        r'$\mathrm{median}=%.2f$' % (median_bak_train, ),
-        r'$\sigma=%.2f$' % (sigma_bak_train, )))
+    raise
+    mu_por = por.mean()
+    median_por = np.median(por)
+    sigma_por = por.std()
+    textstr_por = '\n'.join((
+        r'$\mu=%.2f$' % (mu_por, ),
+        r'$\mathrm{median}=%.2f$' % (median_por, ),
+        r'$\sigma=%.2f$' % (sigma_por, )))
 
+    mu_bak = bakgrund_train.mean()
+    median_bak = np.median(bakgrund)
+    sigma_bak_ = bakgrund.std()
+    textstr_bak_ = '\n'.join((
+        r'$\mu=%.2f$' % (mu_bak, ),
+        r'$\mathrm{median}=%.2f$' % (median_bak, ),
+        r'$\sigma=%.2f$' % (sigma_bak, )))
+    raise
     fig,axes=plt.subplots(1,2,figsize=(16,9))
     sns.distplot(por_train, kde=False, fit=stats.norm, ax=axes[0])
     axes[0].set(xlabel='Intensity', ylabel='Density', title = 'Distribution of pores')
