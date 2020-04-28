@@ -64,8 +64,8 @@ grid_split = 0
 grid_split = 2**grid_split
 
 
-NO_OF_EPOCHS = 5
-max_count = 1
+NO_OF_EPOCHS = 20
+max_count = 7
 b_size = 2
 elast_deform = True
 elast_alpha = 2
@@ -322,10 +322,12 @@ optimizer = BayesianOptimization(f=evaluate_network,
                                  acquisition_jitter = 0.05,
                                  exact_feval=True,
                                  maximize=True)
+                                 
 
 # Only 20 iterations because we have 5 initial random points
-optimizer.run_optimization(max_iter=3)
+optimizer.run_optimization(max_iter=10)
 optimizer.plot_acquisition()
+optimizer.plot_convergence()
 # optimizer = BayesianOptimization(
 #     f=evaluate_network,
 #     pbounds=pbounds,
