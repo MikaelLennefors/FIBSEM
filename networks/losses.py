@@ -3,19 +3,18 @@ import tensorflow as tf
 from tensorflow.keras.layers import *
 import numpy as np
 
-def iou_loss(y_true, y_pred, smooth=240):
-    y_true_c = 1 - y_true
-    y_pred_c = 1 - y_pred
-    intersection = keras.sum(y_true * keras.abs(y_pred), axis=-1)
-    sum_ = keras.sum(y_true + keras.abs(y_pred), axis=-1)
+def iou_loss(y_true, y_pred, smooth=1.):
+    y_true_c = keras.flatten(y_true)
+    y_pred_c = keras.flatten(y_pred)
+    intersection = keras.sum(y_true_c * y_pred_c)
+    sum_ = keras.sum(y_true) + keras.sum(y_pred)
     jac = (intersection+smooth) / (sum_ - intersection+smooth)
 
     # intersection_c = keras.sum(keras.abs(y_true_c * y_pred_c), axis=-1)
     # sum_c = keras.sum(keras.abs(y_true_c) + keras.abs(y_pred_c), axis=-1)
     # jac_c = (intersection + smooth) / (sum_c - intersection_c + smooth)
 
-    return 1 - jac
-
+    return jac
 def create_weighted_binary_crossentropy(zero_weight, one_weight):
 
     def weighted_binary_crossentropy(y_true, y_pred):

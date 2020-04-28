@@ -12,6 +12,15 @@ import numpy as np
 
 smooth = 1.
 dropout_rate = 0.5
+def weighted_binary_crossentropy(y_true, y_pred):
+    zero_weight = 0.31
+    one_weight = 1 - zero_weight
+    b_ce = K.binary_crossentropy(y_true, y_pred)
+
+    weight_vector = y_true * one_weight + (1. - y_true) * zero_weight
+    weighted_b_ce = weight_vector * b_ce
+
+    return weighted_b_ce
 
 def mean_iou(y_true, y_pred):
     prec = []
@@ -24,6 +33,18 @@ def mean_iou(y_true, y_pred):
         prec.append(score)
     return K.mean(K.stack(prec), axis=0)
 
+def iou_loss(y_true, y_pred, smooth=1.):
+    y_true_c = K.flatten(y_true)
+    y_pred_c = K.flatten(y_pred)
+    intersection = K.sum(y_true_c * y_pred_c)
+    sum_ = K.sum(y_true) + K.sum(y_pred)
+    jac = (intersection+smooth) / (sum_ - intersection+smooth)
+
+    # intersection_c = keras.sum(keras.abs(y_true_c * y_pred_c), axis=-1)
+    # sum_c = keras.sum(keras.abs(y_true_c) + keras.abs(y_pred_c), axis=-1)
+    # jac_c = (intersection + smooth) / (sum_c - intersection_c + smooth)
+
+    return jac
 # Custom loss function
 def dice_coef(y_true, y_pred):
     smooth = 1.
@@ -33,7 +54,7 @@ def dice_coef(y_true, y_pred):
     return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
 def bce_dice_loss(y_true, y_pred):
-    return 0.5 * tensorflow.keras.losses.binary_crossentropy(y_true, y_pred) - dice_coef(y_true, y_pred)
+    return 0.5 * weighted_binary_crossentropy(y_true, y_pred) - iou_loss(y_true, y_pred)
 
 
 ########################################

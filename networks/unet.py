@@ -35,12 +35,13 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
        activation_fun = losses.RReLU()
     inputs = Input((input_size, input_size, 1))
 
-    in_0 = inputs
-    if math.ceil(math.log2(input_size)) != math.floor(math.log2(input_size)):
-        in_0 = Conv2D(multiple, 3, padding = 'valid', kernel_initializer = 'he_normal')(in_0)
-        # in_0 = BatchNormalization()(in_0)
-        in_0 = activation_fun(in_0)
-    conv1 = conv_block_down(in_0, multiple, activation_fun)
+    conv = Conv2D(multiple, 3, padding = 'valid', kernel_initializer = 'he_normal')(inputs)
+    # prev_layer = BatchNormalization()(conv)
+    prev_layer = activation_fun(conv)
+
+    conv1 = Conv2D(multiple, 3, padding = 'same', kernel_initializer = 'he_normal')(prev_layer)
+    # prev_layer = BatchNormalization()(conv)
+    conv1 = activation_fun(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
     conv2 = conv_block_down(pool1, 2*multiple, activation_fun)
@@ -59,7 +60,7 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     up6 = conv_block_up(drop5, drop4, 8*multiple, activation_fun)
     up7 = conv_block_up(up6, conv3, 4*multiple, activation_fun)
     up8 = conv_block_up(up7, conv2, 2*multiple, activation_fun)
-    up9 = conv_block_up(up8, conv1, multiple, activation_fun)
+    up9 = conv_block_up(up8, conv, multiple, activation_fun)
     conv9 = Conv2D(2, 3, padding = 'same', kernel_initializer = 'he_normal')(up9)
     act9 = activation_fun(conv9)
     #conv9 = conv_block_down(up9, multiple, activation_fun)
@@ -75,7 +76,7 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
 
 def main():
 
-    model = unet(input_size = 66)
+    model = unet(input_size = 258)
     print(model.summary())
 
 if __name__ == '__main__':

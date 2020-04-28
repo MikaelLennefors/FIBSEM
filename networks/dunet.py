@@ -149,7 +149,7 @@ def squeeze_excite_block(input, activation, ratio=16):
 
 def main():
 
-    model = D_Unet(input_size = (66,5))
+    model = D_Unet(input_size = (258,3))
     print(model.summary())
 
 def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, multiple = 32, learning_rate = 1e-4, dout = 0.5, reg_coeff = 0.001):
@@ -160,86 +160,68 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, mul
     else:
        activation_fun = losses.RReLU()
 
-    inputs = Input(shape=(input_size[0],input_size[0],input_size[1],1), name = 'input')
-    inputs2d = Lambda(squeeze, name = 'squeeze')(inputs)
-    inputs2d = Conv2D(multiple, 3, padding='same', kernel_initializer='he_normal')(inputs2d)
-    inputs2d = activation_fun(inputs2d)
-
-    inputs2d = Conv2D(multiple, 3, padding='valid', kernel_initializer='he_normal')(inputs2d)
-    inputs2d = activation_fun(inputs2d)
-    #conv3d1 = MaxPooling3D(pool_size = (3,3,2), strides=1)(inputs)
-    conv3d1 = BN_block3d(multiple, inputs, activation_fun)
-
-    conv3d1 = Conv3D(multiple, 3, padding='same', kernel_initializer='he_normal')(inputs)
-    conv3d1 = activation_fun(conv3d1)
-    #x = BatchNormalization()(x)
-
-    conv3d1 = Conv3D(multiple, (3,3,2), padding='valid', kernel_initializer='he_normal')(conv3d1)
+    inputs = Input(shape=(input_size[0],input_size[0],input_size[1],1))
+    input2d = Lambda(squeeze)(inputs)
+    conv3d1 = Conv3D(multiple, (3,3,1), padding='valid', kernel_initializer='he_normal')(inputs)
     conv3d1 = activation_fun(conv3d1)
 
-    if math.ceil(math.log2(input_size[0])) != math.floor(math.log2(input_size[0])) and input_size[1] < 7:
-        pool3d1 = MaxPooling3D(pool_size = 2)(conv3d1)
-    else:
-        pool3d1 = MaxPooling3D(pool_size = (2,2,3), strides=(2,2,1))(conv3d1)
+    conv3d1 = Conv3D(multiple, 3, padding='same', kernel_initializer='he_normal')(conv3d1)
+    conv3d1 = activation_fun(conv3d1)
 
+    pool3d1 = MaxPooling3D(pool_size=(2,2,3))(conv3d1)
 
     conv3d2 = BN_block3d(2*multiple, pool3d1, activation_fun)
 
-    conv1 = MaxPooling2D(pool_size = 2)(inputs2d)
-    conv1 = BN_block(2*multiple, conv1, activation_fun)
+    conv1 = Conv2D(multiple, 3, padding='valid', kernel_initializer='he_normal')(input2d)
+    conv1 = activation_fun(conv1)
 
-    comb1 = D_SE_Add(2*multiple, conv3d2, conv1, activation_fun)
 
-    pool1 = MaxPooling2D(2)(comb1)
-    conv2 = BN_block(4*multiple, pool1, activation_fun)
+    conv1 = Conv2D(multiple, 3, padding='same', kernel_initializer='he_normal')(conv1)
+    conv1 = activation_fun(conv1)
 
-    if input_size[0] == 258 and input_size[1] > 3:
-        pool3d2 = MaxPooling3D(2)(conv3d2)
-        conv3d3 = BN_block3d(4*multiple, pool3d2, activation_fun)
+    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
-        conv2 = D_SE_Add(4*multiple, conv3d3, conv2, activation_fun)
+    conv2 = BN_block(2*multiple, pool1, activation_fun)
+    conv2 = D_SE_Add(2*multiple, conv3d2, conv2, activation_fun)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
-    pool2 = MaxPooling2D(2)(conv2)
-    conv3 = BN_block(8*multiple, pool2, activation_fun)
+    conv3 = BN_block(4*multiple, pool2, activation_fun)
+    # conv3 = D_SE_Add(4*multiple, conv3d3, conv3, activation_fun)
+    pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
-    if input_size[0] == 258 and input_size[1] == 7:
-        pool3d3 = MaxPooling3D(2)(conv3d3)
-        conv3d4 = BN_block3d(8*multiple, pool3d3, activation_fun)
+    conv4 = BN_block(8*multiple, pool3, activation_fun)
+    conv4 = Dropout(dout)(conv4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 
-        conv3 = D_SE_Add(8*multiple, conv3d4, conv3, activation_fun)
-
-    drop3 = Dropout(dout)(conv3)
-
-    pool3 = MaxPooling2D(2)(drop3)
-    conv4 = BN_block(16*multiple, pool3, activation_fun)
-
-    drop4 = Dropout(dout)(conv4)
+    conv5 = BN_block(16*multiple, pool4, activation_fun)
+    conv5 = Dropout(dout)(conv5)
 
     up6 = Conv2D(8*multiple, 2, padding='same', kernel_initializer='he_normal')(
-        UpSampling2D(size=(2, 2))(drop4))
+        UpSampling2D(size=(2, 2))(conv5))
     up6 = activation_fun(up6)
-    merge6 = Concatenate()([drop3, up6])
+    merge6 = Concatenate()([conv4, up6])
     conv6 = BN_block(8*multiple, merge6, activation_fun)
 
     up7 = Conv2D(4*multiple, 2, padding='same', kernel_initializer='he_normal')(
         UpSampling2D(size=(2, 2))(conv6))
     up7 = activation_fun(up7)
-    merge7 = Concatenate()([conv2, up7])
+    merge7 = Concatenate()([conv3, up7])
     conv7 = BN_block(4*multiple, merge7, activation_fun)
 
     up8 = Conv2D(2*multiple, 2, padding='same', kernel_initializer='he_normal')(
         UpSampling2D(size=(2, 2))(conv7))
     up8 = activation_fun(up8)
-    merge8 = Concatenate()([comb1, up8])
+    merge8 = Concatenate()([conv2, up8])
     conv8 = BN_block(2*multiple, merge8, activation_fun)
 
     up9 = Conv2D(multiple, 2, padding='same', kernel_initializer='he_normal')(
         UpSampling2D(size=(2, 2))(conv8))
     up9 = activation_fun(up9)
-    merge9 = Concatenate()([inputs2d, up9])
+    merge9 = Concatenate()([conv1, up9])
     conv9 = BN_block(multiple, merge9, activation_fun)
     conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
-    model = Model(inputs=inputs, outputs=conv10, name='Total')
+    model = Model(inputs=inputs, outputs=conv10)
+    model.compile(optimizer = Adam(lr = learning_rate), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
     return model
 
 

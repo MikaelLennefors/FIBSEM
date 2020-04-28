@@ -1,10 +1,7 @@
 import math
 import numpy as np
-import time
 
-from whitening import zca_whitening
-
-def gen_data_split(images, masks, whitening_coeff = 5e-3):
+def gen_data_split(images, masks):
     n_images = np.shape(images)[0]
 
     image_indices = np.random.permutation(n_images)

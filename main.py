@@ -13,6 +13,9 @@ from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
 from bayes_opt import BayesianOptimization
 from PIL import Image
+import GPy
+import GPyOpt
+from GPyOpt.methods import BayesianOptimization
 
 sys.path.insert(1, './networks')
 import losses
@@ -61,9 +64,9 @@ grid_split = 0
 grid_split = 2**grid_split
 
 
-NO_OF_EPOCHS = 200
-max_count = 3
-b_size = 1
+NO_OF_EPOCHS = 5
+max_count = 1
+b_size = 2
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
@@ -79,14 +82,15 @@ net_activ_fun = 0
 
 aug_args = dict(
             vertical_flip = True,
-            horizontal_flip = True,
+            # horizontal_flip = True,
             #shear_range = 0.01,
             #rotation_range = 20,
             #zoom_range = 0.01,
             fill_mode = 'reflect'
         )
 
-zca_coeff = 5e-2
+whitening = False
+zca_coeff = 1e-2
 
 # with open('results/{}/results.txt'.format(gpu), 'w') as f:
 #         for key in configurations[0].keys():
@@ -99,11 +103,22 @@ zca_coeff = 5e-2
 #         f.write('val_FN')
 images, masks = extract_data(data_path, channels)
 test_img, test_mask = extract_data(test_path, channels)
+
+# images = images[:,1:257,1:257,:]
+#
+# test_img = test_img[:,1:257,1:257,:]
+
+
+
+
 if grid_split > 1:
     images, masks = split_grid(images, masks, grid_split)
     test_img, test_mask = split_grid(test_img, test_mask, grid_split, test_set = True)
 
-test_img = zca_whitening(test_img, zca_coeff)
+if whitening == True:
+    test_img = zca_whitening(test_img, zca_coeff)
+else:
+     test_img = test_img / 255.
 
 test_mask = test_mask / 255.
 
@@ -115,7 +130,7 @@ bins = 2
 resampling_const = 2
 for i in range(3):
     print("nu går vi in i gen_data_split nr", i+1)
-    train_images, train_mask, val_images, val_mask = gen_data_split(images, masks, whitening_coeff = zca_coeff)
+    train_images, train_mask, val_images, val_mask = gen_data_split(images, masks)
     if grid_split > 1:
         x = np.mean(train_mask, axis = (1,2,-1))/255
         min_pics = np.shape(x)[0]
@@ -140,25 +155,42 @@ for i in range(3):
         new_indices = np.array(new_indices)
         train_images = train_images[new_indices]
         train_mask = train_mask[new_indices]
-    train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], 1)
+    if channels > 1:
+        train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], channels, 1)
+    else:
+        train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], 1)
     train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
     print(np.shape(train_images))
     print(np.shape(train_mask))
-    train_images = zca_whitening(train_images, zca_coeff)
+
+
+    if whitening == True:
+        train_images = zca_whitening(train_images, zca_coeff)
+        val_images = zca_whitening(val_images, zca_coeff)
+    else:
+         train_images = train_images / 255.
+         val_images = val_images / 255.
+
 
     aug_batch = np.shape(train_images)[0]
     train_gen = gen_aug(train_images, train_mask, aug_args, aug_batch)
     t_gen.append(train_gen)
-    val_images = zca_whitening(val_images, zca_coeff)
+
     v_img.append(val_images)
     v_mask.append(val_mask)
 
-def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
+def evaluate_network(parameters):
+    parameters = parameters[0]
+    print(parameters)
+    net_drop = parameters[0]
+    net_filters = parameters[1]
+    net_lr = parameters[2]
+    prop_elastic = parameters[3]
     zero_weight = np.mean(train_mask) / 255.
     print(zero_weight)
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
-    net_filters = int(math.pow(2,math.floor(net_filters)))
+    net_filters = int(math.pow(2,math.floor(net_filters)+4))
     print('drop: ', net_drop, '\nfilters: ', net_filters, '\nlr: ', net_lr, '\nprop el: ', prop_elastic)
     for i in range(3):
         train_gen = t_gen[i]
@@ -171,7 +203,8 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
         else:
             input_size = (np.shape(val_img)[1],channels)
             m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-        m.compile(optimizer = Adam(lr = net_lr), loss = losses.create_weighted_binary_crossentropy(zero_weight, 1 - zero_weight), metrics = [losses.iou_coef, 'accuracy'])
+        m.compile(optimizer = Adam(lr = net_lr), loss = bce_dice_loss, metrics = [losses.iou_coef, 'accuracy'])
+        # m.compile(optimizer = Adam(lr = net_lr), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy'])
 
 
 
@@ -182,7 +215,9 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
                 predic_mask = self.model.predict(np.expand_dims(test_img[0], axis = 0))
                 # new_shape = int(np.shape(predic_mask)/gridsplit)
                 testy_mask = np.around(predic_mask).reshape(np.shape(predic_mask)[1],np.shape(predic_mask)[1]).astype(np.uint8)*255
-
+                print('')
+                print("True proportion:", np.mean(test_mask[0]), "Predicted proportion:", np.mean(testy_mask)/255)
+                print('')
                 im = Image.fromarray(testy_mask)
                 im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
 
@@ -202,37 +237,49 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
             x = np.swapaxes(x,2,3)
             if np.shape(x)[3] == 1:
                 x = np.squeeze(x, axis = 3)
-            # if elast_deform == True:
-            #     for j in range(np.shape(x)[0]):
-            #         if random.random() < prop_elastic:
-            #             randoint = random.randint(0, 1e3)
-            #             for k in range(channels):
-            #                 seed = np.random.RandomState(randoint)
-            #                 img = x[j,:,:,k]
-            #                 im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
-            #                 if channels > 1:
-            #                     x[j,:,:,k] = im_merge_t
-            #                 else:
-            #                     x[j,:,:,k] = im_merge_t.reshape(img.shape[0],img.shape[1])
-            #             mask = y[j].copy().reshape(np.shape(train_mask)[1],np.shape(train_mask)[1])
-            #             seed = np.random.RandomState(randoint)
-            #             im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
-            #             #print(np.shape(im_mask_t))
-            #             # im_mask_t = im_merge_t[...,0]
-            #             y[j] = im_mask_t#.reshape(256,256,1)
+            if elast_deform == True:
+                for j in range(np.shape(x)[0]):
+                    if random.random() < prop_elastic:
+                        randoint = random.randint(0, 1e3)
+                        for k in range(channels):
+                            seed = np.random.RandomState(randoint)
+                            img = x[j,:,:,k]
+                            im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
+                            if channels > 1:
+                                x[j,:,:,k] = im_merge_t
+                            else:
+                                x[j,:,:,k] = im_merge_t.reshape(img.shape[0],img.shape[1])
+                        mask = y[j].copy().reshape(np.shape(train_mask)[1],np.shape(train_mask)[1])
+                        seed = np.random.RandomState(randoint)
+                        im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
+                        #print(np.shape(im_mask_t))
+                        # im_mask_t = im_merge_t[...,0]
+                        y[j] = im_mask_t#.reshape(256,256,1)
             y = np.around(y / 255.)
 
             # plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
-            plt.subplot(1, 3, 1)
-            plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
-            plt.subplot(1, 3, 2)
-            plt.imshow(array_to_img(y[0]))
-            plt.subplot(1, 3, 3)
-            plt.imshow(array_to_img(x[0]), vmin = 0, vmax = 255, cmap = 'gray')
-            plt.imshow(array_to_img(y[0]), alpha = 0.2)
-
-
-            plt.show()
+            # plt.subplot(1, 3, 1)
+            # plt.imshow(array_to_img(x[0,:,:,1]), vmin = 0, vmax = 255, cmap = 'gray')
+            # plt.subplot(1, 3, 2)
+            # plt.imshow(array_to_img(y[0]))
+            # plt.subplot(1, 3, 3)
+            # plt.imshow(array_to_img(x[0,:,:,1]), vmin = 0, vmax = 255, cmap = 'gray')
+            # plt.imshow(array_to_img(y[0]), alpha = 0.2)
+            #
+            #
+            # plt.show()
+            # print(np.shape(x))
+            # print(np.shape(y))
+            # print(np.shape(val_img))
+            # print(np.shape(val_mask))
+            # print(x)
+            # raise
+            max_val = max(np.max(x), np.max(y), np.max(val_img), np.max(val_mask))
+            if max_val > 1:
+                raise "max_value_error, kolla zca"
+            print('---------')
+            print("---MAX---:", np.max(x), np.max(y), np.max(val_img), np.max(val_mask))
+            print('---------')
             results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
@@ -257,25 +304,37 @@ def evaluate_network(net_drop, net_filters, net_lr, prop_elastic):
 # test = evaluate_network(4,2)
 
 
-bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0, 1)},
-        {'name': 'net_filters', 'type': 'continuous', 'domain': (0, 5)},
-        {'name': 'net_lr', 'type': 'discrete', 'domain': (1, 50)},
-        {'name': 'prop_elastic', 'type': 'continuous', 'domain': (1, 300)}]
-pbounds = {'net_drop': (0.4,0.5),
+bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.4, 0.6)},
+        {'name': 'net_filters', 'type': 'discrete', 'domain': (0, 2)},
+        {'name': 'net_lr', 'type': 'continuous', 'domain': (3, 6)},
+        {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)}]
+
+pbounds = {'net_drop': (0.49,0.5),
     'net_filters': (5.0, 6.0),
-    'net_lr': (3.7, 4.3),
+    'net_lr': (3.9, 4.1),
     'prop_elastic': (0.0, 0.2)
     }
 
-optimizer = BayesianOptimization(
-    f=evaluate_network,
-    pbounds=pbounds,
-    verbose=2,
-)
+optimizer = BayesianOptimization(f=evaluate_network,
+                                 domain=bds,
+                                 model_type='GP',
+                                 acquisition_type ='EI',
+                                 acquisition_jitter = 0.05,
+                                 exact_feval=True,
+                                 maximize=True)
 
-start_time = time.time()
-optimizer.maximize(init_points=10, n_iter=100,)
-time_took = time.time() - start_time
-
-# print(f"Total runtime: {hms_string(time_took)}")
-print(optimizer.max)
+# Only 20 iterations because we have 5 initial random points
+optimizer.run_optimization(max_iter=3)
+optimizer.plot_acquisition()
+# optimizer = BayesianOptimization(
+#     f=evaluate_network,
+#     pbounds=pbounds,
+#     verbose=2,
+# )
+#
+# start_time = time.time()
+# optimizer.maximize(init_points=10, n_iter=100,)
+# time_took = time.time() - start_time
+#
+# # print(f"Total runtime: {hms_string(time_took)}")
+# print(optimizer.max)
