@@ -29,9 +29,12 @@ from extract_data import extract_data
 from whitening import zca_whitening
 from split_grid import split_grid
 from keras_augmentation import gen_aug
+from tensorflow.python.client import device_lib
+
 
 channels = 1
-
+print(len(tf.config.experimental.list_physical_devices('GPU')))
+sys.exit()
 gpu = 'Xp'
 
 if len(sys.argv) > 1:
