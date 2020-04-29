@@ -185,10 +185,10 @@ def evaluate_network(parameters):
     parameters = parameters[0]
     # print(parameters)
     net_drop = parameters[0]
-    net_filters = parameters[1]
+    net_filters = int(parameters[1])
     net_lr = parameters[2]
     prop_elastic = parameters[3]
-    b_size = parameters[4]
+    b_size = int(parameters[4])
     zero_weight = np.mean(train_mask) / 255.
     print(zero_weight)
     mean_benchmark = []
@@ -283,7 +283,6 @@ def evaluate_network(parameters):
             # print("---MAX---:", np.max(x), np.max(y), np.max(val_img), np.max(val_mask))
             # print('---------')
             # print(b_size)
-            b_size = int(b_size)
             results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
