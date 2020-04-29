@@ -193,7 +193,6 @@ def evaluate_network(parameters):
     print(zero_weight)
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
-    net_filters = int(math.pow(2,math.floor(net_filters)+4))
     print('drop: ', net_drop, '\nfilters: ', net_filters, '\nlr: ', net_lr, '\nprop el: ', prop_elastic, '\nb_size:', b_size)
     for i in range(3):
         train_gen = t_gen[i]
@@ -310,10 +309,10 @@ def evaluate_network(parameters):
 
 
 bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.3, 0.5)},
-        {'name': 'net_filters', 'type': 'discrete', 'domain': (0, 2)},
+        {'name': 'net_filters', 'type': 'discrete', 'domain': (16, 32, 64)},
         {'name': 'net_lr', 'type': 'continuous', 'domain': (3, 6)},
         {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)},
-        {'name': 'b_size', 'type': 'discrete', 'domain': (1, 6)}]
+        {'name': 'b_size', 'type': 'discrete', 'domain': (1, 2, 3, 4, 5, 6)}]
 
 pbounds = {'net_drop': (0.49,0.5),
     'net_filters': (5.0, 6.0),
