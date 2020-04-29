@@ -6,12 +6,14 @@ import sys
 # import statistics
 import time
 import math
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
+
 from tensorflow.keras.callbacks import *
 from tensorflow.keras.preprocessing.image import array_to_img
 from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
-from bayes_opt import BayesianOptimization
+# from bayes_opt import BayesianOptimization
 from PIL import Image
 import GPy
 import GPyOpt
@@ -64,9 +66,9 @@ grid_split = 0
 grid_split = 2**grid_split
 
 
-NO_OF_EPOCHS = 20
-max_count = 7
-b_size = 2
+NO_OF_EPOCHS = 30
+max_count = 6
+
 elast_deform = True
 elast_alpha = 2
 elast_sigma = 0.08
@@ -181,17 +183,18 @@ for i in range(3):
 
 def evaluate_network(parameters):
     parameters = parameters[0]
-    print(parameters)
+    # print(parameters)
     net_drop = parameters[0]
     net_filters = parameters[1]
     net_lr = parameters[2]
     prop_elastic = parameters[3]
+    b_size = parameters[4]
     zero_weight = np.mean(train_mask) / 255.
     print(zero_weight)
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
     net_filters = int(math.pow(2,math.floor(net_filters)+4))
-    print('drop: ', net_drop, '\nfilters: ', net_filters, '\nlr: ', net_lr, '\nprop el: ', prop_elastic)
+    print('drop: ', net_drop, '\nfilters: ', net_filters, '\nlr: ', net_lr, '\nprop el: ', prop_elastic, '\nb_size:', b_size)
     for i in range(3):
         train_gen = t_gen[i]
         val_img = v_img[i]
@@ -222,7 +225,7 @@ def evaluate_network(parameters):
                 im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
 
 
-        callbacks_list = [earlystopping1, earlystopping2, PredictionCallback()]
+        callbacks_list = [earlystopping1, earlystopping2]
 
         count = 0
         for c in train_gen:
@@ -277,10 +280,12 @@ def evaluate_network(parameters):
             max_val = max(np.max(x), np.max(y), np.max(val_img), np.max(val_mask))
             if max_val > 1:
                 raise "max_value_error, kolla zca"
-            print('---------')
-            print("---MAX---:", np.max(x), np.max(y), np.max(val_img), np.max(val_mask))
-            print('---------')
-            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            # print('---------')
+            # print("---MAX---:", np.max(x), np.max(y), np.max(val_img), np.max(val_mask))
+            # print('---------')
+            # print(b_size)
+            b_size = int(b_size)
+            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             # i['val_iou'] = max(i['val_iou'], max(results.history['val_iou_coef']))
             # i['val_accuracy'] = max(i['val_accuracy'], max(results.history['val_accuracy']))
             # i['val_TP'] = max(i['val_TP'], max(results.history['val_TP']))
@@ -292,22 +297,23 @@ def evaluate_network(parameters):
             #print(max_count - count)
             if count >= max_count:
                 break
-        print(np.shape(test_img))
-        print(np.shape(test_mask))
-        pred = m.evaluate(test_img, test_mask, verbose = 0)
+        # print(np.shape(test_img))
+        # print(np.shape(test_mask))
+        pred = m.evaluate(test_img, test_mask, verbose = 2)
         score = pred[1]
 
         mean_benchmark.append(score)
     m1 = np.max(mean_benchmark)
-    # mdev = np.std(mean_benchmark)
+    print(m1)
     return m1
 # test = evaluate_network(4,2)
 
 
-bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.4, 0.6)},
+bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.3, 0.5)},
         {'name': 'net_filters', 'type': 'discrete', 'domain': (0, 2)},
         {'name': 'net_lr', 'type': 'continuous', 'domain': (3, 6)},
-        {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)}]
+        {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)},
+        {'name': 'b_size', 'type': 'discrete', 'domain': (1, 6)}]
 
 pbounds = {'net_drop': (0.49,0.5),
     'net_filters': (5.0, 6.0),
@@ -322,10 +328,10 @@ optimizer = BayesianOptimization(f=evaluate_network,
                                  acquisition_jitter = 0.05,
                                  exact_feval=True,
                                  maximize=True)
-                                 
+
 
 # Only 20 iterations because we have 5 initial random points
-optimizer.run_optimization(max_iter=10)
+optimizer.run_optimization(max_iter=100)
 optimizer.plot_acquisition()
 optimizer.plot_convergence()
 # optimizer = BayesianOptimization(
