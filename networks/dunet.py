@@ -21,7 +21,6 @@ def expand(x):
     x = K.expand_dims(x, axis=-1)
     return x
 
-
 def squeeze(x):
     x = K.squeeze(x, axis=-1)
     return x

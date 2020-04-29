@@ -176,8 +176,8 @@ for i in range(3):
 
     aug_batch = np.shape(train_images)[0]
     train_gen = gen_aug(train_images, train_mask, aug_args, aug_batch)
+    
     t_gen.append(train_gen)
-
     v_img.append(val_images)
     v_mask.append(val_mask)
 
