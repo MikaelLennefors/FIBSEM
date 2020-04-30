@@ -3,11 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 from libtiff import TIFF, TIFFfile
-path = '/home/sms/github/unet_data/'
-# path = '../data/'
+import scipy.misc
+# path = '/home/sms/github/unet_data/'
+path = '../data/'
 
-save_path = '/home/sms/github/unet_data/test_data/'
-save_path = '../data/train_val_data_border_clean/'
+# save_path = '/home/sms/github/unet_data/test_data/'
+save_path = '../data/all_data_384/'
 
 
 def read_tiff(path):
@@ -24,17 +25,10 @@ if __name__ == '__main__':
     filename = 'regions_HPC{}.tif'.format(ratio)
     file = path + filename
     img = read_tiff(file)
-    img64 = np.array([])
     print(np.shape(img))
-    print(np.min(img[38]))
-
-    patch_size = 64
-    loop_end_patch = np.shape(img)[1] - patch_size
+    save_name = 'image{}_'.format(ratio)
 
     for image in range(np.shape(img)[0]):
         curr_img = img[image]
-        for rows in range(loop_end_patch):
-            for col in range(loop_end_patch):
-                tmp = curr_img[rows:rows+patch_size,col:col+patch_size]
-                print(tmp)
-                print(np.shape(tmp))
+        curr_img.astype(int)
+        cv2.imwrite(save_path + save_name + str(image).zfill(3) + '.png', curr_img)
