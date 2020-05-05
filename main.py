@@ -100,6 +100,7 @@ aug_args = dict(
 
 images, masks = extract_data(data_path, channels, standardize = False)
 test_img, test_mask = extract_data(test_path, channels, standardize = False)
+
 images_standardized, masks = extract_data(data_path, channels, standardize = True)
 test_img_standardized, test_mask = extract_data(test_path, channels, standardize = True)
 
@@ -171,6 +172,7 @@ for i in range(k_fold):
     v_mask.append(val_mask)
 
 result_dict = []
+
 def exit_print(list_of_dicts):
     print('\n-')
     max_lines = int(input("Input the number of top results to print: "))
@@ -180,19 +182,20 @@ def exit_print(list_of_dicts):
     rows =  [x.values() for x in sorted(list_of_dicts, key = lambda m: m['Mean\nIoU'],reverse=True)[:max_lines]]
 
     print('\n\n')
-    print(tabulate.tabulate(rows, header, tablefmt="fancy_grid", stralign="right", floatfmt=(".3f", "2d", ".2e", "s", "d", ".3f", ".3f")))
+    print(tabulate.tabulate(rows, header, tablefmt="fancy_grid", stralign="right", floatfmt=(".3f", "2d", ".2e", "d", "d", ".3f", ".3f")))
     print('\n\n')
     sys.exit()
+
 def evaluate_network(parameters):
     global test_img
+    global result_dict
     parameters = parameters[0]
     net_drop = parameters[0]
     net_filters = int(parameters[1])
     net_lr = parameters[2]
     prop_elastic = parameters[3]
     b_size = int(parameters[4])
-    whitening = bool(parameters[5])
-    preproc = int(parameters[6])
+    preproc = int(parameters[5])
 
     zero_weight = np.mean(train_mask)
     mean_benchmark = []
@@ -268,12 +271,7 @@ def evaluate_network(parameters):
             max_val = max(np.max(y), np.max(val_mask))
             if max_val > 1:
                 raise
-            try:
-                print('Safe to ctrl-C')
-                results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
-                print('Do not ctrl-C')
-            except KeyboardInterrupt:
-                exit_print(result_dict)
+            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
             count += 1
             if count >= max_count:
                 break
@@ -292,32 +290,41 @@ def evaluate_network(parameters):
 
         mean_benchmark.append(score)
     m1 = np.mean(mean_benchmark)
+    print('One result appended')
     result_dict.append({'Mean\nIoU': m1,
                     'Filters': net_filters,
                     'Learning\nrate': net_lr,
-                    'Whitening': whitening,
+                    'Pre\nprocessing': preproc,
                     'Batch\nsize': b_size,
                     'Dropout': net_drop,
                     'Elastic\nproportion': prop_elastic})
     return m1
 
-bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.3, 0.5)},
-        {'name': 'net_filters', 'type': 'discrete', 'domain': (16, 32, 64)},
-        {'name': 'net_lr', 'type': 'continuous', 'domain': (3, 6)},
-        {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)},
-        {'name': 'b_size', 'type': 'discrete', 'domain': (1, 2, 3, 4, 5, 6)},
-        {'name': 'whitening', 'type': 'discrete', 'domain': (0, 1)},
-        {'name': 'pre_processing', 'type': 'discrete', 'domain': (0, 1, 2, 3, 4, 5, 6, 7)}]
+def main():
+    bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.3, 0.5)},
+            {'name': 'net_filters', 'type': 'discrete', 'domain': (16, 32, 64)},
+            {'name': 'net_lr', 'type': 'continuous', 'domain': (3, 6)},
+            {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)},
+            {'name': 'b_size', 'type': 'discrete', 'domain': (1, 2, 3, 4, 5, 6)},
+            {'name': 'pre_processing', 'type': 'discrete', 'domain': (0, 1, 2, 3, 4, 5, 6, 7)}]
 
-optimizer = BayesianOptimization(f=evaluate_network,
-                                 domain=bds,
-                                 model_type='GP',
-                                 acquisition_type ='EI',
-                                 acquisition_jitter = 0.05,
-                                 exact_feval=True,
-                                 maximize=True)
+    optimizer = BayesianOptimization(f=evaluate_network,
+                                     domain=bds,
+                                     model_type='GP',
+                                     acquisition_type ='EI',
+                                     acquisition_jitter = 0.05,
+                                     exact_feval=True,
+                                     maximize=True)
 
-optimizer.run_optimization(max_iter=100)
+    optimizer.run_optimization(max_iter=100)
 
-optimizer.plot_acquisition()
-optimizer.plot_convergence()
+    optimizer.plot_acquisition()
+    optimizer.plot_convergence()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('Interrupted')
+        exit_print(result_dict)
+        sys.exit()
