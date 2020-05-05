@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import tensorflow as tf
+import datetime
 
 class PredictionCallback(tf.keras.callbacks.Callback):
     def __init__(self, test_img, test_mask, callback_path):
@@ -15,3 +16,8 @@ class PredictionCallback(tf.keras.callbacks.Callback):
         print("True proportion:", np.mean(self.test_mask[0]), "Predicted proportion:", np.mean(testy_mask) / 255.)
         print('')
         cv2.imwrite(self.callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png', testy_mask)
+
+class MyCustomCallback(tf.keras.callbacks.Callback):
+    def on_train_batch_end(self, batch, logs=None):
+        print('Training: batch {} ends at {}'.format(batch, datetime.datetime.now().time()))
+        print(model.layers[0].get_weights)

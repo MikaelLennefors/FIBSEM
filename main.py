@@ -70,8 +70,9 @@ callback_path = './results/{}/callback_masks/'.format(gpu)
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 2
+NO_OF_EPOCHS = 1
 max_count = 1
+k_fold = 1
 
 elast_deform = True
 elast_alpha = 2
@@ -87,7 +88,7 @@ prop_elastic = 0.05
 
 bins = 2
 resampling_const = 2
-k_fold = 1
+
 
 zca_coeff = 1e-2
 
@@ -173,7 +174,10 @@ def exit_print(list_of_dicts):
     print('-')
     max_lines = min(len(list_of_dicts), max_lines)
     header = list_of_dicts[0].keys()
-    rows =  [x.values() for x in sorted(list_of_dicts, key = lambda m: m['Mean IoU'],reverse=True)[:max_lines]]
+    rows =  [list(x.values()) for x in sorted(list_of_dicts, key = lambda m: m['Mean IoU'],reverse=True)[:max_lines]]
+
+
+    #print(rows)
 
     test = pd.DataFrame(data = rows, columns = header)
     test.to_csv('./results/{}/{}_{}_channels.csv'.format(gpu, network, channels), index_label = 'Index')
@@ -183,7 +187,10 @@ def exit_print(list_of_dicts):
     print('\n\n')
     sys.exit()
 
+iteration_count = 0
+
 def evaluate_network(parameters):
+    global iteration_count
     global test_img
     global result_dict
     parameters = parameters[0]
@@ -217,9 +224,10 @@ def evaluate_network(parameters):
             m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
         m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_dice_loss, metrics = [losses.iou_coef, 'accuracy'])
 
-        earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = 100, mode = 'max')
-        earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.6, patience = 50)
+        earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
+        earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.6, patience = NO_OF_EPOCHS // 4)
 
+        print_weights = LambdaCallback(on_epoch_end=lambda batch, logs: print(m.layers[0].get_weights()))
         callbacks_list = [earlystopping1, earlystopping2]
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
@@ -306,7 +314,12 @@ def evaluate_network(parameters):
                     'Batch size': b_size,
                     'Dropout': net_drop,
                     'Elastic proportion': prop_elastic})
-    print('One result appended')
+    iteration_count += 1
+    sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
+    sys.stdout.flush()
+
+    #print('One result appended')
+    #exit_print(result_dict)
     return m1
 
 def main():
@@ -336,4 +349,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('Interrupted')
         exit_print(result_dict)
-        sys.exit()
