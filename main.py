@@ -5,6 +5,7 @@ import os
 import random
 import sys
 import tabulate
+import pandas as pd
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
@@ -65,7 +66,7 @@ callback_path = './results/{}/callback_masks/'.format(gpu)
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 1
+NO_OF_EPOCHS = 2
 max_count = 1
 
 elast_deform = True
@@ -84,7 +85,6 @@ bins = 2
 resampling_const = 2
 k_fold = 1
 
-whitening = True
 zca_coeff = 1e-2
 
 max_intensity = 255.
@@ -98,17 +98,14 @@ aug_args = dict(
             fill_mode = 'reflect'
         )
 
-images, masks = extract_data(data_path, channels)
-test_img, test_mask = extract_data(test_path, channels)
+images, masks = extract_data(data_path, channels, standardize = False)
+test_img, test_mask = extract_data(test_path, channels, standardize = False)
+images_standardized, masks = extract_data(data_path, channels, standardize = True)
+test_img_standardized, test_mask = extract_data(test_path, channels, standardize = True)
 
 if grid_split > 1:
     images, masks = split_grid(images, masks, grid_split)
     test_img, test_mask = split_grid(test_img, test_mask, grid_split, test_set = True)
-
-test_img_zca = zca_whitening(test_img, zca_coeff)
-
-test_img = test_img / max_intensity
-test_mask = test_mask / max_intensity
 
 class PredictionCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
@@ -121,15 +118,14 @@ class PredictionCallback(tf.keras.callbacks.Callback):
         im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
 
 t_gen = []
-t_gen_zca = []
-
+t_gen_standardized = []
 v_img = []
-v_img_zca = []
-
+v_img_standardized = []
 v_mask = []
 
 for i in range(k_fold):
     train_images, train_mask, val_images, val_mask = gen_data_split(images, masks)
+    train_images_standardized, train_mask, val_images_standardized, val_mask = gen_data_split(images_standardized, masks)
     if grid_split > 1:
         x = np.mean(train_mask, axis = (1,2,-1)) / max_intensity
         min_pics = np.shape(x)[0]
@@ -153,31 +149,28 @@ for i in range(k_fold):
                 new_indices.extend(np.repeat(curr_img, resampling_const))
         new_indices = np.array(new_indices)
         train_images = train_images[new_indices]
+        train_images_standardized = train_images_standardized[new_indices]
         train_mask = train_mask[new_indices]
     if channels > 1:
         train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], channels, 1)
+        train_images_standardized = train_images_standardized.reshape(-1, np.shape(train_images_standardized)[1], np.shape(train_images_standardized)[2], channels, 1)
     else:
         train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], 1)
+        train_images_standardized = train_images_standardized.reshape(-1, np.shape(train_images_standardized)[1], np.shape(train_images_standardized)[2], 1)
     train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
 
-    train_images_zca = zca_whitening(train_images, zca_coeff)
-    val_images_zca = zca_whitening(val_images, zca_coeff)
-
-    train_images = train_images / max_intensity
-    val_images = val_images / max_intensity
-
     aug_batch = np.shape(train_images)[0]
+
     train_gen = gen_aug(train_images, train_mask, aug_args, aug_batch)
-    train_gen_zca = gen_aug(train_images_zca, train_mask, aug_args, aug_batch)
+    train_gen_standardized = gen_aug(train_images_standardized, train_mask, aug_args, aug_batch)
 
     t_gen.append(train_gen)
-    t_gen_zca.append(train_gen_zca)
+    t_gen_standardized.append(train_gen_standardized)
     v_img.append(val_images)
-    v_img_zca.append(val_images_zca)
+    v_img_standardized.append(val_images_standardized)
     v_mask.append(val_mask)
 
 result_dict = []
-
 def exit_print(list_of_dicts):
     print('\n-')
     max_lines = int(input("Input the number of top results to print: "))
@@ -185,12 +178,13 @@ def exit_print(list_of_dicts):
     max_lines = min(len(list_of_dicts), max_lines)
     header = list_of_dicts[0].keys()
     rows =  [x.values() for x in sorted(list_of_dicts, key = lambda m: m['Mean\nIoU'],reverse=True)[:max_lines]]
+
     print('\n\n')
     print(tabulate.tabulate(rows, header, tablefmt="fancy_grid", stralign="right", floatfmt=(".3f", "2d", ".2e", "s", "d", ".3f", ".3f")))
     print('\n\n')
     sys.exit()
-
 def evaluate_network(parameters):
+    global test_img
     parameters = parameters[0]
     net_drop = parameters[0]
     net_filters = int(parameters[1])
@@ -198,17 +192,21 @@ def evaluate_network(parameters):
     prop_elastic = parameters[3]
     b_size = int(parameters[4])
     whitening = bool(parameters[5])
-    zero_weight = np.mean(train_mask) / max_intensity
+    preproc = int(parameters[6])
+
+    zero_weight = np.mean(train_mask)
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
     #print('drop:', net_drop, '\nfilters:', net_filters, '\nlr:', net_lr, '\nprop el:', prop_elastic, '\nb_size:', b_size, '\nwhitening:', whitening)
     for i in range(k_fold):
-        if whitening == True:
-            train_gen = t_gen_zca[i]
-            val_img = v_img_zca[i]
+        if preproc == 0:
+            train_gen = t_gen_standardized[i]
+            val_img = v_img_standardized[i]
+            test_img = test_img_standardized
         else:
             train_gen = t_gen[i]
             val_img = v_img[i]
+            test_img = test_img
         val_mask = v_mask[i]
 
         if channels == 1:
@@ -225,6 +223,7 @@ def evaluate_network(parameters):
         callbacks_list = [earlystopping1, earlystopping2]
 
         count = 0
+
         for c in train_gen:
             y = np.array(c[-1])
             x = []
@@ -237,6 +236,18 @@ def evaluate_network(parameters):
             x = np.swapaxes(x,2,3)
             if np.shape(x)[3] == 1:
                 x = np.squeeze(x, axis = 3)
+
+            if preproc == 1:
+                x = x / max_intensity
+                val_img = val_img / max_intensity
+                test_img = test_img / max_intensity
+            elif preproc > 1:
+                whitening = 10**-(preproc - 1)
+                x = zca_whitening(x, whitening)
+                val_img = zca_whitening(val_img, whitening)
+                test_img = zca_whitening(test_img, whitening)
+
+
             if elast_deform == True:
                 for j in range(np.shape(x)[0]):
                     if random.random() < prop_elastic:
@@ -253,10 +264,10 @@ def evaluate_network(parameters):
                         seed = np.random.RandomState(randoint)
                         im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
                         y[j] = im_mask_t
-            y = np.around(y / max_intensity)
-            max_val = max(np.max(x), np.max(y), np.max(val_img), np.max(val_mask))
+            y = np.around(y)
+            max_val = max(np.max(y), np.max(val_mask))
             if max_val > 1:
-                raise "max_value_error, kolla zca"
+                raise
             try:
                 print('Safe to ctrl-C')
                 results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
@@ -266,10 +277,17 @@ def evaluate_network(parameters):
             count += 1
             if count >= max_count:
                 break
-        if whitening == True:
-            pred = m.evaluate(test_img_zca, test_mask, verbose = 0)
-        else:
-            pred = m.evaluate(test_img, test_mask, verbose = 0)
+
+        test = m.predict(test_img, verbose = 0)
+        testy_mask = np.around(test).reshape(np.shape(test)[0],np.shape(test)[1],np.shape(test)[2]).astype(np.uint8)
+        diff_mask = np.abs(testy_mask - np.squeeze(test_mask, axis = -1))
+        pred = m.evaluate(test_img, test_mask, verbose = 0)
+        summed_diff = np.sum(diff_mask, axis = 0)
+        # plt.imshow(array_to_img(summed_diff.reshape(256,256,1)))
+        # plt.show()
+        # sys.exit()
+        # im = Image.fromarray(testy_mask)
+        # im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
         score = pred[1]
 
         mean_benchmark.append(score)
@@ -288,7 +306,8 @@ bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.3, 0.5)},
         {'name': 'net_lr', 'type': 'continuous', 'domain': (3, 6)},
         {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)},
         {'name': 'b_size', 'type': 'discrete', 'domain': (1, 2, 3, 4, 5, 6)},
-        {'name': 'whitening', 'type': 'discrete', 'domain': (0, 1)}]
+        {'name': 'whitening', 'type': 'discrete', 'domain': (0, 1)},
+        {'name': 'pre_processing', 'type': 'discrete', 'domain': (0, 1, 2, 3, 4, 5, 6, 7)}]
 
 optimizer = BayesianOptimization(f=evaluate_network,
                                  domain=bds,

@@ -15,5 +15,5 @@ def gen_data_split(images, masks):
     val_images = im_split[1]
 
     train_mask = mask_split[0].astype(np.uint8)
-    val_mask = mask_split[1] / 255.
+    val_mask = mask_split[1]
     return train_images, train_mask, val_images, val_mask

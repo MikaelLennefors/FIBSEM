@@ -5,7 +5,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 def gen_aug(train_images, train_mask, maskgen_args, b_size):
     channels = np.shape(train_images)[3]
     img_datagen = ImageDataGenerator(**maskgen_args)
-    seed = random.randint(0, 1e3)
+    seed = 139
     mask_generator = img_datagen.flow(train_mask, batch_size=b_size, seed = seed)
     if channels == 1:
         img_generator = img_datagen.flow(train_images, batch_size=b_size, seed = seed)
