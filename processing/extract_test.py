@@ -1,9 +1,6 @@
 import numpy as np
 import os
 
-from PIL import Image
-from scipy.special import binom
-
 load_path_test = '../data/test_data'
 
 def merge_data(path_to_data = '../data/train_val_data_384/', channels = 7):

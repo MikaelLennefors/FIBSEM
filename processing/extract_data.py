@@ -1,10 +1,7 @@
 import numpy as np
 import os
 import cv2
-import sys
-import matplotlib.pyplot as plt
 import itertools
-from tensorflow.keras.preprocessing.image import array_to_img
 
 def extract_data(path, channels, standardize = False):
 

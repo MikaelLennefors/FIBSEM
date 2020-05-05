@@ -1,7 +1,16 @@
 from tensorflow.keras import backend as keras
-import tensorflow as tf
 from tensorflow.keras.layers import *
 import numpy as np
+
+def weighted_binary_crossentropy(y_true, y_pred):
+    zero_weight = 0.31
+    one_weight = 1 - zero_weight
+    b_ce = keras.binary_crossentropy(y_true, y_pred)
+
+    weight_vector = y_true * one_weight + (1. - y_true) * zero_weight
+    weighted_b_ce = weight_vector * b_ce
+
+    return weighted_b_ce
 
 def iou_loss(y_true, y_pred, smooth=1.):
     y_true_c = keras.flatten(y_true)
@@ -15,17 +24,16 @@ def iou_loss(y_true, y_pred, smooth=1.):
     # jac_c = (intersection + smooth) / (sum_c - intersection_c + smooth)
 
     return jac
-def create_weighted_binary_crossentropy(zero_weight, one_weight):
+# Custom loss function
+def dice_coef(y_true, y_pred):
+    smooth = 1.
+    y_true_f = keras.flatten(y_true)
+    y_pred_f = keras.flatten(y_pred)
+    intersection = keras.sum(y_true_f * y_pred_f)
+    return (2. * intersection + smooth) / (keras.sum(y_true_f) + keras.sum(y_pred_f) + smooth)
 
-    def weighted_binary_crossentropy(y_true, y_pred):
-        b_ce = keras.binary_crossentropy(y_true, y_pred)
-
-        weight_vector = y_true * one_weight + (1. - y_true) * zero_weight
-        weighted_b_ce = weight_vector * b_ce
-
-        return weighted_b_ce
-
-    return weighted_binary_crossentropy
+def bce_dice_loss(y_true, y_pred):
+    return 0.5 * weighted_binary_crossentropy(y_true, y_pred) - iou_loss(y_true, y_pred)
 
 def iou_coef(y_true, y_pred):
     # y_true_f = 1 - keras.flatten(y_true)
@@ -36,12 +44,6 @@ def iou_coef(y_true, y_pred):
     union = keras.sum (y_true_f + y_pred_f - y_true_f * y_pred_f)
 
     return intersection / union
-
-def dice_coef(y_true, y_pred):
-    y_true_f = keras.flatten(y_true)
-    y_pred_f = keras.flatten(y_pred)
-    intersection = keras.sum(y_true_f * y_pred_f)
-    return (2. * intersection) / (keras.sum(y_true_f) + keras.sum(y_pred_f))
 
 class RReLU(Layer):
     '''Randomized Leaky Rectified Linear Unit

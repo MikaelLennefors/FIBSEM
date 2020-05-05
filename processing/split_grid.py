@@ -1,8 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import random
-
-from PIL import Image
 
 def split_grid(images, masks, grid_split, test_set = False):
     img_shape = int(np.shape(masks)[1]/grid_split)

@@ -11,10 +11,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 
 from GPyOpt.methods import BayesianOptimization
-from PIL import Image
 
 from tensorflow.keras.callbacks import *
-from tensorflow.keras.preprocessing.image import array_to_img
 from tensorflow.keras.optimizers import Adam
 
 sys.path.insert(1, './networks')
@@ -22,7 +20,7 @@ import losses
 from unet import unet
 from dunet import D_Unet
 from multiresunet import MultiResUnet
-from nestnet import Nest_Net, bce_dice_loss
+from nestnet import Nest_Net
 
 sys.path.insert(1, './processing')
 from elastic_deformation import elastic_transform
@@ -31,6 +29,9 @@ from extract_data import extract_data
 from whitening import zca_whitening
 from split_grid import split_grid
 from keras_augmentation import gen_aug
+
+sys.path.insert(1, './visualization')
+from keras_callbacks import PredictionCallback
 
 channels = 1
 
@@ -107,16 +108,6 @@ test_img_standardized, test_mask = extract_data(test_path, channels, standardize
 if grid_split > 1:
     images, masks = split_grid(images, masks, grid_split)
     test_img, test_mask = split_grid(test_img, test_mask, grid_split, test_set = True)
-
-class PredictionCallback(tf.keras.callbacks.Callback):
-    def on_epoch_end(self, epoch, logs={}):
-        predic_mask = self.model.predict(np.expand_dims(test_img[0], axis = 0))
-        testy_mask = max_intensity * np.around(predic_mask).reshape(np.shape(predic_mask)[1],np.shape(predic_mask)[1]).astype(np.uint8)
-        print('')
-        print("True proportion:", np.mean(test_mask[0]), "Predicted proportion:", np.mean(testy_mask) / max_intensity)
-        print('')
-        im = Image.fromarray(testy_mask)
-        im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
 
 t_gen = []
 t_gen_standardized = []
@@ -218,12 +209,13 @@ def evaluate_network(parameters):
         else:
             input_size = (np.shape(val_img)[1],channels)
             m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-        m.compile(optimizer = Adam(lr = net_lr), loss = bce_dice_loss, metrics = [losses.iou_coef, 'accuracy'])
+        m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_dice_loss, metrics = [losses.iou_coef, 'accuracy'])
 
         earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = 100, mode = 'max')
         earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.6, patience = 50)
 
         callbacks_list = [earlystopping1, earlystopping2]
+        # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
 

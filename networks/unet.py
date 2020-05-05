@@ -50,22 +50,6 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
         conv = Conv2D(multiple, 3, padding = 'same', strides = 1, kernel_initializer = 'he_normal')(prev_layer)
         # prev_layer = BatchNormalization()(conv)
         conv1 = activation_fun(conv)
-    # if input_size == 384:
-    #     conv = Conv2D(multiple, 129, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(inputs)
-    #     # prev_layer = BatchNormalization()(conv)
-    #     prev_layer = activation_fun(conv)
-    #
-    #     conv = Conv2D(multiple, 3, padding = 'same', strides = 1, kernel_initializer = 'he_normal')(prev_layer)
-    #     # prev_layer = BatchNormalization()(conv)
-    #     conv1 = activation_fun(conv)
-    # elif input_size == 258:
-    #     conv1 = Conv2D(multiple, 3, padding = 'valid', kernel_initializer = 'he_normal')(inputs)
-    #     # prev_layer = BatchNormalization()(conv)
-    #     conv1 = activation_fun(conv1)
-    #
-    #     conv1 = Conv2D(multiple, 3, padding = 'same', kernel_initializer = 'he_normal')(conv1)
-    #     # prev_layer = BatchNormalization()(conv)
-    #     conv1 = activation_fun(conv1)
 
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
@@ -88,7 +72,6 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     up9 = conv_block_up(up8, conv1, multiple, activation_fun)
     conv9 = Conv2D(2, 3, padding = 'same', kernel_initializer = 'he_normal')(up9)
     act9 = activation_fun(conv9)
-    #conv9 = conv_block_down(up9, multiple, activation_fun)
     #conv9 = BatchNormalization()(conv9)
     conv10 = Conv2D(1, 1, activation = 'sigmoid')(act9)
 

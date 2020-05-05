@@ -1,5 +1,4 @@
 import numpy as np
-import random
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 def gen_aug(train_images, train_mask, maskgen_args, b_size):

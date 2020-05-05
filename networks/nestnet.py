@@ -10,52 +10,6 @@ from tensorflow.keras.layers import GaussianDropout
 
 import numpy as np
 
-smooth = 1.
-dropout_rate = 0.5
-def weighted_binary_crossentropy(y_true, y_pred):
-    zero_weight = 0.31
-    one_weight = 1 - zero_weight
-    b_ce = K.binary_crossentropy(y_true, y_pred)
-
-    weight_vector = y_true * one_weight + (1. - y_true) * zero_weight
-    weighted_b_ce = weight_vector * b_ce
-
-    return weighted_b_ce
-
-def mean_iou(y_true, y_pred):
-    prec = []
-    for t in np.arange(0.5, 1.0, 0.05):
-        y_pred_ = tf.to_int32(y_pred > t)
-        score, up_opt = tf.metrics.mean_iou(y_true, y_pred_, 2)
-        K.get_session().run(tf.local_variables_initializer())
-        with tf.control_dependencies([up_opt]):
-            score = tf.identity(score)
-        prec.append(score)
-    return K.mean(K.stack(prec), axis=0)
-
-def iou_loss(y_true, y_pred, smooth=1.):
-    y_true_c = K.flatten(y_true)
-    y_pred_c = K.flatten(y_pred)
-    intersection = K.sum(y_true_c * y_pred_c)
-    sum_ = K.sum(y_true) + K.sum(y_pred)
-    jac = (intersection+smooth) / (sum_ - intersection+smooth)
-
-    # intersection_c = keras.sum(keras.abs(y_true_c * y_pred_c), axis=-1)
-    # sum_c = keras.sum(keras.abs(y_true_c) + keras.abs(y_pred_c), axis=-1)
-    # jac_c = (intersection + smooth) / (sum_c - intersection_c + smooth)
-
-    return jac
-# Custom loss function
-def dice_coef(y_true, y_pred):
-    smooth = 1.
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-
-def bce_dice_loss(y_true, y_pred):
-    return 0.5 * weighted_binary_crossentropy(y_true, y_pred) - iou_loss(y_true, y_pred)
-
 
 ########################################
 # 2D Standard
@@ -73,56 +27,6 @@ def standard_unit(input_tensor, stage, nb_filter, kernel_size=3):
     return x
 
 ########################################
-
-"""
-Standard U-Net [Ronneberger et.al, 2015]
-Total params: 7,759,521
-"""
-def U_Net(img_rows, img_cols, color_type=1, num_class=1):
-
-    nb_filter = [32,64,128,256,512]
-    act = 'elu'
-
-    # Handle Dimension Ordering for different backends
-    global bn_axis
-    bn_axis = 3
-    img_input = Input(shape=(img_rows, img_cols, color_type), name='main_input')
-
-    conv1_1 = standard_unit(img_input, stage='11', nb_filter=nb_filter[0])
-    pool1 = MaxPooling2D((2, 2), strides=(2, 2), name='pool1')(conv1_1)
-
-    conv2_1 = standard_unit(pool1, stage='21', nb_filter=nb_filter[1])
-    pool2 = MaxPooling2D((2, 2), strides=(2, 2), name='pool2')(conv2_1)
-
-    conv3_1 = standard_unit(pool2, stage='31', nb_filter=nb_filter[2])
-    pool3 = MaxPooling2D((2, 2), strides=(2, 2), name='pool3')(conv3_1)
-
-    conv4_1 = standard_unit(pool3, stage='41', nb_filter=nb_filter[3])
-    pool4 = MaxPooling2D((2, 2), strides=(2, 2), name='pool4')(conv4_1)
-
-    conv5_1 = standard_unit(pool4, stage='51', nb_filter=nb_filter[4])
-
-    up4_2 = Conv2DTranspose(nb_filter[3], (2, 2), strides=(2, 2), name='up42', padding='same')(conv5_1)
-    conv4_2 = concatenate([up4_2, conv4_1], name='merge42', axis=bn_axis)
-    conv4_2 = standard_unit(conv4_2, stage='42', nb_filter=nb_filter[3])
-
-    up3_3 = Conv2DTranspose(nb_filter[2], (2, 2), strides=(2, 2), name='up33', padding='same')(conv4_2)
-    conv3_3 = concatenate([up3_3, conv3_1], name='merge33', axis=bn_axis)
-    conv3_3 = standard_unit(conv3_3, stage='33', nb_filter=nb_filter[2])
-
-    up2_4 = Conv2DTranspose(nb_filter[1], (2, 2), strides=(2, 2), name='up24', padding='same')(conv3_3)
-    conv2_4 = concatenate([up2_4, conv2_1], name='merge24', axis=bn_axis)
-    conv2_4 = standard_unit(conv2_4, stage='24', nb_filter=nb_filter[1])
-
-    up1_5 = Conv2DTranspose(nb_filter[0], (2, 2), strides=(2, 2), name='up15', padding='same')(conv2_4)
-    conv1_5 = concatenate([up1_5, conv1_1], name='merge15', axis=bn_axis)
-    conv1_5 = standard_unit(conv1_5, stage='15', nb_filter=nb_filter[0])
-
-    unet_output = Conv2D(num_class, (1, 1), activation='sigmoid', name='output', kernel_initializer = 'he_normal', padding='same', kernel_regularizer=l2(1e-4))(conv1_5)
-
-    model = Model(inputs=img_input, outputs=unet_output)
-
-    return model
 
 """
 wU-Net for comparison

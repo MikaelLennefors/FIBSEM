@@ -1,13 +1,8 @@
-from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
 import cv2
-from libtiff import TIFF, TIFFfile
-import scipy.misc
-# path = '/home/sms/github/unet_data/'
+from libtiff import TIFF
 path = '../data/'
 
-# save_path = '/home/sms/github/unet_data/test_data/'
 save_path = '../data/all_data_384/'
 
 
