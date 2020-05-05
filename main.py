@@ -45,7 +45,10 @@ print(gpu)
 
 if len(sys.argv) > 2:
     channels = int(sys.argv[2])
-
+if channels == 1:
+    network = 'unet'
+if channels > 1:
+    network = 'dunet'
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
 
 if gpu == 'Xp':
@@ -170,7 +173,10 @@ def exit_print(list_of_dicts):
     print('-')
     max_lines = min(len(list_of_dicts), max_lines)
     header = list_of_dicts[0].keys()
-    rows =  [x.values() for x in sorted(list_of_dicts, key = lambda m: m['Mean\nIoU'],reverse=True)[:max_lines]]
+    rows =  [x.values() for x in sorted(list_of_dicts, key = lambda m: m['Mean IoU'],reverse=True)[:max_lines]]
+
+    test = pd.DataFrame(data = rows, columns = header)
+    test.to_csv('./results/{}/{}_{}_channels.csv'.format(gpu, network, channels), index_label = 'Index')
 
     print('\n\n')
     print(tabulate.tabulate(rows, header, tablefmt="fancy_grid", stralign="right", floatfmt=(".3f", "2d", ".2e", "d", "d", ".3f", ".3f")))
@@ -293,13 +299,13 @@ def evaluate_network(parameters):
                 6: 'ZCA: 1e-5',
                 7: 'ZCA: 1e-6'}
 
-    result_dict.append({'Mean\nIoU': m1,
+    result_dict.append({'Mean IoU': m1,
                     'Filters': net_filters,
-                    'Learning\nrate': net_lr,
-                    'Pre\nprocessing': pre_proc[preproc],
-                    'Batch\nsize': b_size,
+                    'Learning rate': net_lr,
+                    'Pre processing': pre_proc[preproc],
+                    'Batch size': b_size,
                     'Dropout': net_drop,
-                    'Elastic\nproportion': prop_elastic})
+                    'Elastic proportion': prop_elastic})
     print('One result appended')
     return m1
 
