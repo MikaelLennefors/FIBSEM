@@ -290,14 +290,25 @@ def evaluate_network(parameters):
 
         mean_benchmark.append(score)
     m1 = np.mean(mean_benchmark)
-    print('One result appended')
+
+
+    pre_proc = {0: 'Standardized',
+                1: 'Normalized',
+                2: 'ZCA: 1e-1',
+                3: 'ZCA: 1e-2',
+                4: 'ZCA: 1e-3',
+                5: 'ZCA: 1e-4',
+                6: 'ZCA: 1e-5',
+                7: 'ZCA: 1e-6'}
+
     result_dict.append({'Mean\nIoU': m1,
                     'Filters': net_filters,
                     'Learning\nrate': net_lr,
-                    'Pre\nprocessing': preproc,
+                    'Pre\nprocessing': pre_proc[preproc],
                     'Batch\nsize': b_size,
                     'Dropout': net_drop,
                     'Elastic\nproportion': prop_elastic})
+    print('One result appended')
     return m1
 
 def main():
