@@ -1,11 +1,10 @@
 import math
 import numpy as np
 
-def gen_data_split(images, masks):
+def gen_data_split(images, masks, random_seed):
     n_images = np.shape(images)[0]
 
-    image_indices = np.random.RandomState(seed=42).permutation(n_images)
-
+    image_indices = np.random.RandomState(seed=random_seed).permutation(n_images)
     n_training_image = math.floor(0.75*n_images)
 
     im_split = np.vsplit(images[image_indices],[n_training_image])

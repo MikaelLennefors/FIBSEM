@@ -2,8 +2,7 @@ from tensorflow.keras import backend as keras
 from tensorflow.keras.layers import *
 import numpy as np
 
-def weighted_binary_crossentropy(y_true, y_pred):
-    zero_weight = 0.31
+def weighted_binary_crossentropy(y_true, y_pred, zero_weight = 0.31):
     one_weight = 1 - zero_weight
     b_ce = keras.binary_crossentropy(y_true, y_pred)
 
@@ -31,9 +30,10 @@ def dice_coef(y_true, y_pred):
     y_pred_f = keras.flatten(y_pred)
     intersection = keras.sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (keras.sum(y_true_f) + keras.sum(y_pred_f) + smooth)
-
-def bce_dice_loss(y_true, y_pred):
-    return 0.5 * weighted_binary_crossentropy(y_true, y_pred) - iou_loss(y_true, y_pred)
+def bce_iou_loss(zero_weight):
+    def bce_dice_loss(y_true, y_pred):
+        return 0.5 * weighted_binary_crossentropy(y_true, y_pred, zero_weight) - iou_loss(y_true, y_pred)
+    return bce_dice_loss
 
 def iou_coef(y_true, y_pred):
     # y_true_f = 1 - keras.flatten(y_true)
