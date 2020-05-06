@@ -108,12 +108,14 @@ aug_args = dict(
 images, masks = extract_data(data_path, channels, standardize = False)
 test_img, test_mask = extract_data(test_path, channels, standardize = False)
 
-images_standardized, masks = extract_data(data_path, channels, standardize = True)
-test_img_standardized, test_mask = extract_data(test_path, channels, standardize = True)
+images_standardized, _ = extract_data(data_path, channels, standardize = True)
+test_img_standardized, _ = extract_data(test_path, channels, standardize = True)
 
 if grid_split > 1:
     images, masks = split_grid(images, masks, grid_split)
     test_img, test_mask = split_grid(test_img, test_mask, grid_split, test_set = True)
+    images_standardized, masks = split_grid(images_standardized, masks, grid_split)
+    test_img_standardized, test_mask = split_grid(test_img_standardized, test_mask, grid_split, test_set = True)
 
 t_gen = []
 t_gen_standardized = []
