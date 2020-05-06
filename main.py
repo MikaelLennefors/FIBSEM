@@ -71,9 +71,9 @@ callback_path = './results/{}/callback_masks/'.format(gpu)
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 40
-max_count = 5
-k_fold = 3
+NO_OF_EPOCHS = 20
+max_count = 1
+k_fold = 1
 
 elast_deform = True
 elast_alpha = 2
@@ -107,8 +107,6 @@ aug_args = dict(
 images, masks = extract_data(data_path, channels, standardize = False)
 test_img, test_mask = extract_data(test_path, channels, standardize = False)
 
-import pdb; pdb.set_trace()
-
 images_standardized, masks = extract_data(data_path, channels, standardize = True)
 test_img_standardized, test_mask = extract_data(test_path, channels, standardize = True)
 
@@ -123,8 +121,8 @@ v_img_standardized = []
 v_mask = []
 
 for i in range(k_fold):
-    train_images, train_mask, val_images, val_mask = gen_data_split(images, masks)
-    train_images_standardized, train_mask, val_images_standardized, val_mask = gen_data_split(images_standardized, masks)
+    train_images, train_mask, val_images, val_mask = gen_data_split(images, masks, random_seed = i)
+    train_images_standardized, train_mask, val_images_standardized, val_mask = gen_data_split(images_standardized, masks, random_seed = i)
     if grid_split > 1:
         x = np.mean(train_mask, axis = (1,2,-1)) / max_intensity
         min_pics = np.shape(x)[0]
@@ -171,24 +169,7 @@ for i in range(k_fold):
 
 result_dict = []
 
-def exit_print(list_of_dicts):
-    print('\n-')
-    max_lines = int(input("Input the number of top results to print: "))
-    print('-')
-    max_lines = min(len(list_of_dicts), max_lines)
-    header = list_of_dicts[0].keys()
-    rows =  [list(x.values()) for x in sorted(list_of_dicts, key = lambda m: m['Mean IoU'],reverse=True)[:max_lines]]
 
-
-    #print(rows)
-
-    test = pd.DataFrame(data = rows, columns = header)
-    test.to_csv('./results/{}/{}_{}_channels.csv'.format(gpu, network, channels), index_label = 'Index')
-
-    print('\n\n')
-    print(tabulate.tabulate(rows, header, tablefmt="fancy_grid", stralign="right", floatfmt=(".3f", "2d", ".2e", "d", "d", ".3f", ".3f")))
-    print('\n\n')
-    sys.exit()
 
 iteration_count = 0
 
@@ -227,7 +208,7 @@ def evaluate_network(parameters):
         else:
             input_size = (np.shape(val_img)[1],channels)
             m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
-        m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_dice_loss, metrics = [losses.iou_coef, 'accuracy'])
+        m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_iou_loss(zero_weight), metrics = [losses.iou_coef, 'accuracy'])
 
         earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
         earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.6, patience = NO_OF_EPOCHS // 2)
@@ -283,27 +264,23 @@ def evaluate_network(parameters):
             if max_val > 1:
                 raise
             results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
-            weights = []
-            from itertools import chain
-            for layer in m.layers:
-                curr_weights = layer.get_weights()
-                if curr_weights:
-                    #print(curr_weights)
-                    for countttt in range(2):
-                        weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
-            print(np.min(weights))
-            print(np.max(weights))
-            print(np.mean(weights))
-            print(np.median(weights))
+            # weights = []
+            # from itertools import chain
+            # for layer in m.layers:
+            #     curr_weights = layer.get_weights()
+            #     if curr_weights:
+            #         #print(curr_weights)
+            #         for countttt in range(2):
+            #             weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
+            # print(np.min(weights))
+            # print(np.max(weights))
+            # print(np.mean(weights))
+            # print(np.median(weights))
             # print(weights)
             #plt.hist(weights, bins = 100)
             # plt.show()
-            sys.exit()
-            weights = weights.flatten()
-            print(np.shape(weights))
-            plt.hist(weights)
-            plt.show()
-            sys.exit()
+            # weights = weights.flatten()
+            # print(np.shape(weights))
 
             count += 1
             if count >= max_count:
@@ -373,4 +350,4 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print('Interrupted')
-        exit_print(result_dict)
+        exit_print(result_dict, gpu, network, channels)
