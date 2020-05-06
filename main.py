@@ -32,6 +32,7 @@ from keras_augmentation import gen_aug
 
 sys.path.insert(1, './visualization')
 from keras_callbacks import PredictionCallback
+from exit_print import exit_print
 
 channels = 1
 
