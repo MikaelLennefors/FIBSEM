@@ -62,17 +62,18 @@ if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
 data_path = './data/train_val_data_border_clean/'
 test_path = './data/test_data_border_clean/'
 
-log_path = './results/{}/log.out'.format(gpu)
+log_path = './results/{}/log.out'.format(gpu) #TODO Old from tensorboard
 weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
+#TODO WILL WE HA PARAMTERS SÅ HÄR?
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 1
-max_count = 1
-k_fold = 1
+NO_OF_EPOCHS = 40
+max_count = 5
+k_fold = 3
 
 elast_deform = True
 elast_alpha = 2
@@ -105,6 +106,8 @@ aug_args = dict(
 
 images, masks = extract_data(data_path, channels, standardize = False)
 test_img, test_mask = extract_data(test_path, channels, standardize = False)
+
+import pdb; pdb.set_trace()
 
 images_standardized, masks = extract_data(data_path, channels, standardize = True)
 test_img_standardized, test_mask = extract_data(test_path, channels, standardize = True)
@@ -205,6 +208,8 @@ def evaluate_network(parameters):
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
     #print('drop:', net_drop, '\nfilters:', net_filters, '\nlr:', net_lr, '\nprop el:', prop_elastic, '\nb_size:', b_size, '\nwhitening:', whitening)
+    sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
+    sys.stdout.flush()
     for i in range(k_fold):
         if preproc == 0:
             train_gen = t_gen_standardized[i]
@@ -225,7 +230,7 @@ def evaluate_network(parameters):
         m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_dice_loss, metrics = [losses.iou_coef, 'accuracy'])
 
         earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
-        earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.6, patience = NO_OF_EPOCHS // 4)
+        earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.6, patience = NO_OF_EPOCHS // 2)
 
         print_weights = LambdaCallback(on_epoch_end=lambda batch, logs: print(m.layers[0].get_weights()))
         callbacks_list = [earlystopping1, earlystopping2]
@@ -278,6 +283,28 @@ def evaluate_network(parameters):
             if max_val > 1:
                 raise
             results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
+            weights = []
+            from itertools import chain
+            for layer in m.layers:
+                curr_weights = layer.get_weights()
+                if curr_weights:
+                    #print(curr_weights)
+                    for countttt in range(2):
+                        weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
+            print(np.min(weights))
+            print(np.max(weights))
+            print(np.mean(weights))
+            print(np.median(weights))
+            # print(weights)
+            #plt.hist(weights, bins = 100)
+            # plt.show()
+            sys.exit()
+            weights = weights.flatten()
+            print(np.shape(weights))
+            plt.hist(weights)
+            plt.show()
+            sys.exit()
+
             count += 1
             if count >= max_count:
                 break
@@ -315,8 +342,6 @@ def evaluate_network(parameters):
                     'Dropout': net_drop,
                     'Elastic proportion': prop_elastic})
     iteration_count += 1
-    sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
-    sys.stdout.flush()
 
     #print('One result appended')
     #exit_print(result_dict)

@@ -4,3 +4,4 @@ callback_masks
 *.zip
 *.hdf5
 *.tif
+*.csv
