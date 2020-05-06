@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-def split_grid(images, masks, grid_split, test_set = False):
+def split_grid(images, masks, grid_split, test_set = False, rand_seed = 1):
     img_shape = int(np.shape(masks)[1]/grid_split)
 
     img_split = []
@@ -14,6 +14,7 @@ def split_grid(images, masks, grid_split, test_set = False):
         cols = rows
     else:
         n_patches = 30
+        random.seed(rand_seed)
         rows = np.sort(random.sample(range(0, 256 - img_shape), n_patches))
         cols = np.sort(random.sample(range(0, 256 - img_shape), n_patches))
 
