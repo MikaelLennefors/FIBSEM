@@ -160,11 +160,10 @@ def MultiResUnet(input_size = (258,258,3,1), activation = 0, multiple = 32, dout
        activation_fun = losses.RReLU()
 
     inputs = Input(shape=input_size)
-    input2d = Lambda(squeeze)(inputs)
-    conv1 = input2d
+    conv1 = Lambda(squeeze)(inputs)
 
     if input_size[0] > 256:
-        conv = Conv2D(multiple, (input_size[0] - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(input2d)
+        conv = Conv2D(multiple, (input_size[0] - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(conv1)
         # prev_layer = BatchNormalization()(conv)
         prev_layer = activation_fun(conv)
 
