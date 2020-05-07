@@ -73,7 +73,7 @@ callback_path = './results/{}/callback_masks/'.format(gpu)
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 20
+NO_OF_EPOCHS = 10
 max_count = 6
 k_fold = 3
 
@@ -105,6 +105,7 @@ aug_args = dict(
             # zoom_range = 0.01,
             fill_mode = 'reflect'
         )
+print('Number of epochs: ', NO_OF_EPOCHS, '\tMax count: ', max_count, '\tk fold: ', k_fold, '\tGrid split: ', grid_split)
 
 images, masks = extract_data(data_path, channels, standardize = False)
 test_img, test_mask = extract_data(test_path, channels, standardize = False)
@@ -201,7 +202,7 @@ def evaluate_network(parameters):
     net_lr = 1e-4
     prop_elastic = 0
     b_size = 3
-    preproc = 1
+    preproc = 0
 
     #print('drop:', net_drop, '\nfilters:', net_filters, '\nlr:', net_lr, '\nprop el:', prop_elastic, '\nb_size:', b_size, '\nwhitening:', whitening)
     sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
