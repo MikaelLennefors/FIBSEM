@@ -152,7 +152,7 @@ def main():
     model = D_Unet(input_size = (258,3))
     print(model.summary())
 
-def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, multiple = 32, learning_rate = 1e-4, dout = 0.5, reg_coeff = 0.001):
+def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, multiple = 32, dout = 0.5, reg_coeff = 0.001):
     K.clear_session()
 
     if activation == 0:

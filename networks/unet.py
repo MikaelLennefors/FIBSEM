@@ -26,7 +26,7 @@ def conv_block_up(prev_layer, concat_layer, n_filters, activation):
 
     return output
 
-def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple = 32, learning_rate = 1e-4, dout = 0.5):
+def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple = 32, dout = 0.5):
     keras.clear_session()
 
     if activation == 0:
