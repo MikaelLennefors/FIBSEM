@@ -22,6 +22,7 @@ from unet import unet
 from dunet import D_Unet
 from multiresunet import MultiResUnet
 from nestnet import Nest_Net
+from early_stop import EarlyStoppingBaseline, EarlyStoppingDelta
 
 sys.path.insert(1, './processing')
 from elastic_deformation import elastic_transform
@@ -153,12 +154,9 @@ for i in range(k_fold):
         train_images = train_images[new_indices]
         train_images_standardized = train_images_standardized[new_indices]
         train_mask = train_mask[new_indices]
-    if channels > 1:
-        train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], channels, 1)
-        train_images_standardized = train_images_standardized.reshape(-1, np.shape(train_images_standardized)[1], np.shape(train_images_standardized)[2], channels, 1)
-    else:
-        train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], 1)
-        train_images_standardized = train_images_standardized.reshape(-1, np.shape(train_images_standardized)[1], np.shape(train_images_standardized)[2], 1)
+    train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], channels, 1)
+    train_images_standardized = train_images_standardized.reshape(-1, np.shape(train_images_standardized)[1], np.shape(train_images_standardized)[2], channels, 1)
+
     train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
 
     aug_batch = np.shape(train_images)[0]
@@ -191,7 +189,6 @@ def evaluate_network(parameters):
     preproc = int(parameters[5])
 
     zero_weight = np.mean(train_mask)
-    print(zero_weight)
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
 
@@ -204,7 +201,6 @@ def evaluate_network(parameters):
     b_size = 3
     preproc = 0
 
-    #print('drop:', net_drop, '\nfilters:', net_filters, '\nlr:', net_lr, '\nprop el:', prop_elastic, '\nb_size:', b_size, '\nwhitening:', whitening)
     sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
     sys.stdout.flush()
     for i in range(k_fold):
@@ -218,20 +214,17 @@ def evaluate_network(parameters):
             test_img = test_img
         val_mask = v_mask[i]
 
-        if channels == 1:
-            input_size = np.shape(val_img)[1]
-            m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
-            # m = Nest_Net(input_size, color_type=1, num_class=1, deep_supervision=False)
-        else:
-            input_size = (np.shape(val_img)[1],channels)
-            m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        input_size = np.shape(val_img)[1:]
+        m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        # m = Nest_Net(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        # m = MultiResUnet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        # m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
         m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_iou_loss(zero_weight), metrics = [losses.iou_coef, 'accuracy'])
 
-        earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
-        earlystopping2 = EarlyStopping(monitor = 'val_accuracy', baseline = 0.6, patience = NO_OF_EPOCHS // 2,  mode = 'auto')
-
-        print_weights = LambdaCallback(on_epoch_end=lambda batch, logs: print(m.layers[0].get_weights()))
-        callbacks_list = [earlystopping2]
+        # earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
+        # earlystopping2 = EarlyStopping(monitor = 'val_accuracy', baseline = 0.6, patience = NO_OF_EPOCHS // 2,  mode = 'auto')
+        patience = NO_OF_EPOCHS // 2
+        callbacks_list = [EarlyStoppingBaseline(patience), EarlyStoppingDelta(patience)]
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
@@ -254,8 +247,6 @@ def evaluate_network(parameters):
             x = np.swapaxes(x,0,1)
             x = np.swapaxes(x,1,2)
             x = np.swapaxes(x,2,3)
-            if np.shape(x)[3] == 1:
-                x = np.squeeze(x, axis = 3)
 
             if preproc == 1:
                 x = x / max_intensity
@@ -294,13 +285,14 @@ def evaluate_network(parameters):
                 val_img_curr = val_img
                 test_img_curr = test_img
 
-            print(np.min(x), '\t', np.max(x))
+            print('\n', np.min(x), '\t', np.max(x))
             print(np.min(y), '\t', np.max(y))
             print(np.min(test_img_curr), '\t', np.max(test_img_curr))
             print(np.min(val_img_curr), '\t', np.max(val_img_curr))
+            print(np.min(val_mask), '\t', np.max(val_mask))
+            print(np.min(test_mask), '\t', np.max(test_mask))
 
-
-            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask))
+            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
 
             count += 1
             if count >= max_count:
@@ -311,12 +303,12 @@ def evaluate_network(parameters):
         # diff_mask = np.abs(testy_mask - np.squeeze(test_mask, axis = -1))
 
 
-        weights = []
-        for layer in m.layers:
-            curr_weights = layer.get_weights()
-            if curr_weights:
-                for countttt in range(2):
-                    weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
+        # weights = []
+        # for layer in m.layers:
+        #     curr_weights = layer.get_weights()
+        #     if curr_weights:
+        #         for countttt in range(2):
+        #             weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
 
         pred = m.evaluate(test_img_curr, test_mask, verbose = 0)
         score = pred[1]
