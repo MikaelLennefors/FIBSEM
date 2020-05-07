@@ -7,10 +7,13 @@ from tensorflow.keras import backend as keras
 from tensorflow.keras.constraints import unit_norm, max_norm
 import losses
 
+def squeeze(x):
+    x = keras.squeeze(x, axis=-1)
+    return x
+
 def conv_block_down(prev_layer, n_filters, activation):
     for i in range(2):
         conv = Conv2D(n_filters, 3, padding = 'same', kernel_initializer = 'he_normal')(prev_layer)
-        # prev_layer = BatchNormalization()(conv)
         prev_layer = activation(conv)
 
     return prev_layer
@@ -19,36 +22,34 @@ def conv_block_up(prev_layer, concat_layer, n_filters, activation):
     up_test = Conv2D(n_filters, 2, padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D()(prev_layer))
     up_test = activation(up_test)
     # up_test = Conv2DTranspose(n_filters, 2, strides=(2, 2), padding='same')(prev_layer)
-    # up_test = BatchNormalization()(up_test)
     # up_test = activation(up_test)
     merge = concatenate([concat_layer,up_test], axis = 3)
     output = conv_block_down(merge, n_filters, activation)
 
     return output
 
-def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple = 32, dout = 0.5):
+def unet(pretrained_weights = None, input_size = (258, 258, 1, 1), activation = 1, multiple = 32, dout = 0.5):
     keras.clear_session()
 
     if activation == 0:
        activation_fun = elu
     else:
        activation_fun = losses.RReLU()
-    inputs = Input((input_size, input_size, 1))
-    if input_size > 256:
-        conv = Conv2D(multiple, (input_size - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(inputs)
-        # prev_layer = BatchNormalization()(conv)
+
+    inputs = Input(shape=input_size)
+    conv1 = Lambda(squeeze)(inputs)
+
+    if input_size[0] > 256:
+        conv = Conv2D(multiple, (input_size[0] - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(conv1)
         prev_layer = activation_fun(conv)
 
-        conv = Conv2D(multiple, (input_size - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(prev_layer)
-        # prev_layer = BatchNormalization()(conv)
+        conv = Conv2D(multiple, (input_size[0] - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(prev_layer)
         conv1 = activation_fun(conv)
-    elif input_size == 256:
-        conv = Conv2D(multiple, 3, padding = 'same', strides = 1, kernel_initializer = 'he_normal')(inputs)
-        # prev_layer = BatchNormalization()(conv)
+    elif input_size[0] == 256:
+        conv = Conv2D(multiple, 3, padding = 'same', strides = 1, kernel_initializer = 'he_normal')(conv1)
         prev_layer = activation_fun(conv)
 
         conv = Conv2D(multiple, 3, padding = 'same', strides = 1, kernel_initializer = 'he_normal')(prev_layer)
-        # prev_layer = BatchNormalization()(conv)
         conv1 = activation_fun(conv)
 
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
@@ -72,7 +73,6 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
     up9 = conv_block_up(up8, conv1, multiple, activation_fun)
     conv9 = Conv2D(2, 3, padding = 'same', kernel_initializer = 'he_normal')(up9)
     act9 = activation_fun(conv9)
-    #conv9 = BatchNormalization()(conv9)
     conv10 = Conv2D(1, 1, activation = 'sigmoid')(act9)
 
     model = Model(inputs = inputs, outputs = conv10)
@@ -84,7 +84,7 @@ def unet(pretrained_weights = None, input_size = 256, activation = 1, multiple =
 
 def main():
 
-    model = unet(input_size = int(input('Dimension: ')))
+    model = unet(input_size = (258,258,1,1))
     print(model.summary())
 
 if __name__ == '__main__':

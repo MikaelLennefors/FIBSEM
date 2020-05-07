@@ -1,12 +1,16 @@
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Conv2DTranspose, concatenate, BatchNormalization, Activation, add
 from tensorflow.keras.models import Model, model_from_json
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import ELU, LeakyReLU
+from tensorflow.keras.layers import *
 from tensorflow.keras.activations import sigmoid
+from tensorflow.keras.activations import relu, elu
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras import backend as keras
 import losses
 
+def squeeze(x):
+    x = keras.squeeze(x, axis=-1)
+    return x
 
 def conv2d_bn(x, filters, num_row, num_col, padding='same', strides=(1, 1), name=None):
     '''
@@ -29,7 +33,7 @@ def conv2d_bn(x, filters, num_row, num_col, padding='same', strides=(1, 1), name
     '''
 
     x = Conv2D(filters, (num_row, num_col), strides=strides, padding=padding, use_bias=False)(x)
-    x = BatchNormalization(axis=3, scale=False)(x)
+    # x = BatchNormalization(axis=3, scale=False)(x)
 
     return x
 
@@ -55,7 +59,7 @@ def trans_conv2d_bn(x, filters, num_row, num_col, padding='same', strides=(2, 2)
     '''
 
     x = Conv2DTranspose(filters, (num_row, num_col), strides=strides, padding=padding)(x)
-    x = BatchNormalization(axis=3, scale=False)(x)
+    # x = BatchNormalization(axis=3, scale=False)(x)
 
     return x
 
@@ -89,11 +93,11 @@ def MultiResBlock(U, inp, activation, alpha = 1.67):
     conv7x7 = activation(conv7x7)
 
     out = concatenate([conv3x3, conv5x5, conv7x7], axis=3)
-    out = BatchNormalization(axis=3)(out)
+    # out = BatchNormalization(axis=3)(out)
 
     out = add([shortcut, out])
     out = activation(out)
-    out = BatchNormalization(axis=3)(out)
+    # out = BatchNormalization(axis=3)(out)
 
     return out
 
@@ -119,7 +123,7 @@ def ResPath(filters, length, inp, activation):
     out = activation(out)
     out = add([shortcut, out])
     out = activation(out)
-    out = BatchNormalization(axis=3)(out)
+    # out = BatchNormalization(axis=3)(out)
 
     for i in range(length-1):
 
@@ -130,12 +134,12 @@ def ResPath(filters, length, inp, activation):
         out = activation(out)
         out = add([shortcut, out])
         out = activation(out)
-        out = BatchNormalization(axis=3)(out)
+        # out = BatchNormalization(axis=3)(out)
 
     return out
 
 
-def MultiResUnet(input_size = (256,256,1), activation = 1, multiple = 32, dout = 0.5):
+def MultiResUnet(input_size = (258,258,3,1), activation = 0, multiple = 32, dout = 0.5):
     '''
     MultiResUNet
 
@@ -155,10 +159,12 @@ def MultiResUnet(input_size = (256,256,1), activation = 1, multiple = 32, dout =
     else:
        activation_fun = losses.RReLU()
 
-    inputs = Input(input_size)
-    conv1 = inputs
+    inputs = Input(shape=input_size)
+    input2d = Lambda(squeeze)(inputs)
+    conv1 = input2d
+
     if input_size[0] > 256:
-        conv = Conv2D(multiple, (input_size[0] - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(inputs)
+        conv = Conv2D(multiple, (input_size[0] - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(input2d)
         # prev_layer = BatchNormalization()(conv)
         prev_layer = activation_fun(conv)
 
@@ -178,13 +184,14 @@ def MultiResUnet(input_size = (256,256,1), activation = 1, multiple = 32, dout =
     mresblock3 = ResPath(multiple*4, 2, mresblock3, activation = activation_fun)
 
     mresblock4 = MultiResBlock(multiple*8, pool3, activation = activation_fun)
-    pool4 = MaxPooling2D(pool_size=(2, 2))(mresblock4)
+    drop4 = Dropout(dout)(mresblock4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
     mresblock4 = ResPath(multiple*8, 1, mresblock4, activation = activation_fun)
 
     mresblock5 = MultiResBlock(multiple*16, pool4, activation = activation_fun)
-
+    drop5 = Dropout(dout)(mresblock5)
     up6 = concatenate([Conv2DTranspose(
-        multiple*8, (2, 2), strides=(2, 2), padding='same')(mresblock5), mresblock4], axis=3)
+        multiple*8, (2, 2), strides=(2, 2), padding='same')(drop5), drop4], axis=3)
     mresblock6 = MultiResBlock(multiple*8, up6, activation = activation_fun)
 
     up7 = concatenate([Conv2DTranspose(
@@ -212,7 +219,7 @@ def main():
 
     # Define the model
 
-    model = MultiResUnet(input_size = (258, 258,1))
+    model = MultiResUnet(input_size = (258,258,3,1))
     print(model.summary())
 
 

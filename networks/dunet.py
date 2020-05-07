@@ -8,7 +8,7 @@ from tensorflow.keras.utils import multi_gpu_model
 from tensorflow.keras.activations import relu, elu
 import math
 import h5py
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend as keras
 import tensorflow as tf
 import math
 from matplotlib import pyplot as plt
@@ -19,15 +19,15 @@ import os
 import losses
 
 def expand(x):
-    x = K.expand_dims(x, axis=-1)
+    x = keras.expand_dims(x, axis=-1)
     return x
 
 def squeeze(x):
-    x = K.squeeze(x, axis=-1)
+    x = keras.squeeze(x, axis=-1)
     return x
 
 def squeeze_2(x):
-    x = K.squeeze(x, axis=-2)
+    x = keras.squeeze(x, axis=-2)
     return x
 
 def BN_block(filter_num, input, activation):
@@ -131,7 +131,7 @@ def squeeze_excite_block(input, activation, ratio=16):
     Returns: a keras tensor
     '''
     init = input
-    channel_axis = 1 if K.image_data_format() == "channels_first" else -1
+    channel_axis = 1 if keras.image_data_format() == "channels_first" else -1
     filters = init.shape[channel_axis]
     se_shape = (1, 1, filters)
 
@@ -141,7 +141,7 @@ def squeeze_excite_block(input, activation, ratio=16):
     se = activation(se)
     se = Dense(filters, activation='sigmoid', kernel_initializer='he_normal', use_bias=False)(se)
 
-    if K.image_data_format() == 'channels_first':
+    if keras.image_data_format() == 'channels_first':
         se = Permute((3, 1, 2))(se)
 
     x = multiply([init, se])
@@ -149,18 +149,18 @@ def squeeze_excite_block(input, activation, ratio=16):
 
 def main():
 
-    model = D_Unet(input_size = (258,3))
+    model = D_Unet(input_size = (258,258,3,1))
     print(model.summary())
 
-def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, multiple = 32, dout = 0.5, reg_coeff = 0.001):
-    K.clear_session()
+def D_Unet(pretrained_weights = None, input_size = (258,258,3,1), activation = 0, multiple = 32, dout = 0.5):
+    keras.clear_session()
 
     if activation == 0:
        activation_fun = elu
     else:
        activation_fun = losses.RReLU()
 
-    inputs = Input(shape=(input_size[0],input_size[0],input_size[1],1))
+    inputs = Input(shape=input_size)
     input2d = Lambda(squeeze)(inputs)
     conv3d1 = Conv3D(multiple, (3,3,1), padding='valid', kernel_initializer='he_normal')(inputs)
     conv3d1 = activation_fun(conv3d1)
@@ -221,76 +221,7 @@ def D_Unet(pretrained_weights = None, input_size = (256, 7), activation = 0, mul
     conv9 = BN_block(multiple, merge9, activation_fun)
     conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
     model = Model(inputs=inputs, outputs=conv10)
-    model.compile(optimizer = Adam(lr = learning_rate), loss = losses.iou_loss, metrics = [losses.iou_coef, 'accuracy', losses.TP, losses.TN, losses.FP, losses.FN])
     return model
-
-def origin_block(filter_num, input):
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
-    x1 = Activation('relu')(x)
-    x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(x1)
-    x = Activation('relu')(x)
-    return x
-
-def Unet3d():
-    inputs = Input(shape=(192, 192, 4))
-    input3d = Lambda(expand)(inputs)
-    conv1 = BN_block3d(32, input3d)
-    pool1 = MaxPooling3D(pool_size=(2, 2, 1))(conv1)
-
-    conv2 = BN_block3d(64, pool1)
-    pool2 = MaxPooling3D(pool_size=(2, 2, 1))(conv2)
-
-    conv3 = BN_block3d(128, pool2)
-    pool3 = MaxPooling3D(pool_size=(2, 2, 1))(conv3)
-
-    conv4 = BN_block3d(256, pool3)
-    drop4 = Dropout(0.3)(conv4)
-    pool4 = MaxPooling3D(pool_size=(2, 2, 1))(drop4)
-
-    conv5 = BN_block3d(512, pool4)
-    drop5 = Dropout(0.3)(conv5)
-
-    up6 = Conv3D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal', name='6')(
-        UpSampling3D(size=(2, 2, 1))(drop5))
-    merge6 = Concatenate()([drop4, up6])
-    conv6 = BN_block3d(256, merge6)
-
-    up7 = Conv3D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal', name='8')(
-        UpSampling3D(size=(2, 2, 1))(conv6))
-    merge7 = Concatenate()([conv3, up7])
-    conv7 = BN_block3d(128, merge7)
-
-    up8 = Conv3D(64, 2, activation='relu', padding='same', kernel_initializer='he_normal', name='10')(
-        UpSampling3D(size=(2, 2, 1))(conv7))
-    merge8 = Concatenate()([conv2, up8])
-    conv8 = BN_block3d(64, merge8)
-
-    up9 = Conv3D(32, 2, activation='relu', padding='same', kernel_initializer='he_normal', name='12')(
-        UpSampling3D(size=(2, 2, 1))(conv8))
-    merge9 = Concatenate()([conv1, up9])
-    conv9 = BN_block3d(32, merge9)
-    conv10 = Conv3D(1, 1, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
-    conv10 = Lambda(squeeze)(conv10)
-    # '''
-    # conv11 = Lambda(squeeze)(conv10)
-    conv11 = BN_block(32, conv10)
-    conv11 = Conv2D(1, 1, activation='sigmoid')(conv11)
-    # '''
-    model = Model(input=inputs, output=conv11)
-
-    return model
-
-def conv_bn_block(x, filter):
-    x = Conv3D(filter, 3, padding='same', kernel_initializer='he_normal')(x)
-    x = BatchNormalization()(x)
-    x1 = Activation('relu')(x)
-    x = Conv3D(filter, 3, padding='same', kernel_initializer='he_normal')(x1)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Concatenate()([x, x1])
-    return x
-
-
 
 if __name__ == '__main__':
     main()

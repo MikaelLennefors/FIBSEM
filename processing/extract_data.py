@@ -44,6 +44,8 @@ def extract_data(path, channels, standardize = False):
     imgs = np.array(imgs).reshape((-1, 258, 258, 1)).astype('float32')
     masks = np.array(masks).reshape((-1, 256, 256, 1)) / 255.
 
+    if channels == 1:
+        imgs = np.expand_dims(imgs, axis = -1)
     if channels > 1:
         imgs = imgs.reshape(-1, 7, 258, 258, 1)
         imgs = np.swapaxes(imgs,1,2)
