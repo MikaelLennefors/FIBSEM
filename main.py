@@ -10,6 +10,7 @@ import pandas as pd
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 
+from itertools import chain
 from GPyOpt.methods import BayesianOptimization
 
 from tensorflow.keras.callbacks import *
@@ -73,8 +74,8 @@ grid_split = 0
 grid_split = 2**grid_split
 
 NO_OF_EPOCHS = 20
-max_count = 1
-k_fold = 1
+max_count = 6
+k_fold = 3
 
 elast_deform = True
 elast_alpha = 2
@@ -189,8 +190,19 @@ def evaluate_network(parameters):
     preproc = int(parameters[5])
 
     zero_weight = np.mean(train_mask)
+    print(zero_weight)
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
+
+
+    parameters = parameters[0]
+    net_drop = 0.3
+    net_filters = 32
+    net_lr = 1e-4
+    prop_elastic = 0
+    b_size = 3
+    preproc = 1
+
     #print('drop:', net_drop, '\nfilters:', net_filters, '\nlr:', net_lr, '\nprop el:', prop_elastic, '\nb_size:', b_size, '\nwhitening:', whitening)
     sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
     sys.stdout.flush()
@@ -207,20 +219,29 @@ def evaluate_network(parameters):
 
         if channels == 1:
             input_size = np.shape(val_img)[1]
-            m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
+            m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+            # m = Nest_Net(input_size, color_type=1, num_class=1, deep_supervision=False)
         else:
             input_size = (np.shape(val_img)[1],channels)
-            m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, learning_rate = net_lr, dout = net_drop)
+            m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
         m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_iou_loss(zero_weight), metrics = [losses.iou_coef, 'accuracy'])
 
         earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
-        earlystopping2 = EarlyStopping(monitor = 'val_iou_coef', baseline = 0.6, patience = NO_OF_EPOCHS // 2)
+        earlystopping2 = EarlyStopping(monitor = 'val_accuracy', baseline = 0.6, patience = NO_OF_EPOCHS // 2,  mode = 'auto')
 
         print_weights = LambdaCallback(on_epoch_end=lambda batch, logs: print(m.layers[0].get_weights()))
-        callbacks_list = [earlystopping1, earlystopping2]
+        callbacks_list = [earlystopping2]
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
+
+        if preproc == 1:
+            val_img_norm = val_img / max_intensity
+            test_img_norm = test_img / max_intensity
+        elif preproc > 1:
+            whitening = 10**-(preproc - 1)
+            val_img_zca = zca_whitening(val_img, whitening)
+            test_img_zca = zca_whitening(test_img, whitening)
 
         for c in train_gen:
             y = np.array(c[-1])
@@ -237,14 +258,9 @@ def evaluate_network(parameters):
 
             if preproc == 1:
                 x = x / max_intensity
-                val_img = val_img / max_intensity
-                test_img = test_img / max_intensity
             elif preproc > 1:
                 whitening = 10**-(preproc - 1)
                 x = zca_whitening(x, whitening)
-                val_img = zca_whitening(val_img, whitening)
-                test_img = zca_whitening(test_img, whitening)
-
 
             if elast_deform == True:
                 for j in range(np.shape(x)[0]):
@@ -266,44 +282,46 @@ def evaluate_network(parameters):
             max_val = max(np.max(y), np.max(val_mask))
             if max_val > 1:
                 raise
-            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img, val_mask), callbacks = callbacks_list)
-            # weights = []
-            # from itertools import chain
-            # for layer in m.layers:
-            #     curr_weights = layer.get_weights()
-            #     if curr_weights:
-            #         #print(curr_weights)
-            #         for countttt in range(2):
-            #             weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
-            # print(np.min(weights))
-            # print(np.max(weights))
-            # print(np.mean(weights))
-            # print(np.median(weights))
-            # print(weights)
-            #plt.hist(weights, bins = 100)
-            # plt.show()
-            # weights = weights.flatten()
-            # print(np.shape(weights))
+
+            if preproc == 1:
+                val_img_curr = val_img_norm
+                test_img_curr = test_img_norm
+            elif preproc > 1:
+                val_img_curr = val_img_zca
+                test_img_curr = test_img_zca
+            else:
+                val_img_curr = val_img
+                test_img_curr = test_img
+
+            print(np.min(x), '\t', np.max(x))
+            print(np.min(y), '\t', np.max(y))
+            print(np.min(test_img_curr), '\t', np.max(test_img_curr))
+            print(np.min(val_img_curr), '\t', np.max(val_img_curr))
+
+
+            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask))
 
             count += 1
             if count >= max_count:
                 break
 
-        test = m.predict(test_img, verbose = 0)
-        testy_mask = np.around(test).reshape(np.shape(test)[0],np.shape(test)[1],np.shape(test)[2]).astype(np.uint8)
-        diff_mask = np.abs(testy_mask - np.squeeze(test_mask, axis = -1))
-        pred = m.evaluate(test_img, test_mask, verbose = 0)
-        summed_diff = np.sum(diff_mask, axis = 0)
-        # plt.imshow(array_to_img(summed_diff.reshape(256,256,1)))
-        # plt.show()
-        # sys.exit()
-        # im = Image.fromarray(testy_mask)
-        # im.save(callback_path + 'pred_mask_' + str(epoch).zfill(3) + '.png')
+        # test = m.predict(test_img_curr, verbose = 0)
+        # testy_mask = np.around(test).reshape(np.shape(test)[0],np.shape(test)[1],np.shape(test)[2]).astype(np.uint8)
+        # diff_mask = np.abs(testy_mask - np.squeeze(test_mask, axis = -1))
+
+
+        weights = []
+        for layer in m.layers:
+            curr_weights = layer.get_weights()
+            if curr_weights:
+                for countttt in range(2):
+                    weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
+
+        pred = m.evaluate(test_img_curr, test_mask, verbose = 0)
         score = pred[1]
 
         mean_benchmark.append(score)
     m1 = np.mean(mean_benchmark)
-
 
     pre_proc = {0: 'Standardized',
                 1: 'Normalized',

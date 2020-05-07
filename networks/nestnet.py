@@ -165,11 +165,11 @@ def Nest_Net(img_shape, color_type=1, num_class=1, deep_supervision=False):
 
 if __name__ == '__main__':
 
-    model = U_Net(96,96,1)
-    model.summary()
+    # model = U_Net(96,96,1)
+    # model.summary()
+    #
+    # model = wU_Net(96,96,1)
+    # model.summary()
 
-    model = wU_Net(96,96,1)
-    model.summary()
-
-    model = Nest_Net(96,96,1)
+    model = Nest_Net(256,256,1)
     model.summary()
