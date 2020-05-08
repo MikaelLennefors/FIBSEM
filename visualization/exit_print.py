@@ -8,9 +8,11 @@ def exit_print(list_of_dicts, gpu, network, channels):
     max_lines = int(input("Input the number of top results to print: "))
     print('-')
     max_lines = min(len(list_of_dicts), max_lines)
+    if max_lines < 1:
+        print('Dict of results is empty')
+        sys.exit()
     header = list_of_dicts[0].keys()
     rows =  [list(x.values()) for x in sorted(list_of_dicts, key = lambda m: m['Mean IoU'],reverse=True)[:max_lines]]
-
 
     #print(rows)
 

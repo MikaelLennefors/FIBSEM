@@ -30,20 +30,21 @@ class EarlyStoppingBaseline(tf.keras.callbacks.Callback):
 
   def on_epoch_end(self, epoch, logs=None):
     current = logs.get('val_accuracy')
-    if np.greater(current, self.best):
-      # self.best = 0.5
-      # self.patience = 1
-      self.wait = 0
-      # Record the best weights if current results is better (greater).
-      # self.best_weights = self.model.get_weights()
-      # self.best = 0.6
-    else:
-      self.wait += 1
-      if self.wait >= self.patience:
-        self.stopped_epoch = epoch
-        self.model.stop_training = True
-        # print('Restoring model weights from the end of the best epoch.')
-        # self.model.set_weights(self.best_weights)
+    if current != None:
+        if np.greater(current, self.best):
+          # self.best = 0.5
+          # self.patience = 1
+          self.wait = 0
+          # Record the best weights if current results is better (greater).
+          # self.best_weights = self.model.get_weights()
+          # self.best = 0.6
+        else:
+          self.wait += 1
+          if self.wait >= self.patience:
+            self.stopped_epoch = epoch
+            self.model.stop_training = True
+            # print('Restoring model weights from the end of the best epoch.')
+            # self.model.set_weights(self.best_weights)
 
   def on_train_end(self, logs=None):
     if self.stopped_epoch > 0:
@@ -72,14 +73,15 @@ class EarlyStoppingDelta(tf.keras.callbacks.Callback):
 
   def on_epoch_end(self, epoch, logs=None):
     current = logs.get('val_iou_coef')
-    if current - self.best > 0.001:
-      self.best = current
-      self.wait = 0
-    else:
-      self.wait += 1
-      if self.wait >= self.patience:
-        self.stopped_epoch = epoch
-        self.model.stop_training = True
+    if current != None:
+        if current - self.best > 0.001:
+          self.best = current
+          self.wait = 0
+        else:
+          self.wait += 1
+          if self.wait >= self.patience:
+            self.stopped_epoch = epoch
+            self.model.stop_training = True
 
   def on_train_end(self, logs=None):
     if self.stopped_epoch > 0:

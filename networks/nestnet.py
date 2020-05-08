@@ -52,12 +52,11 @@ def Nest_Net(input_size = (258,258,3,1), activation = 0, multiple = 32, dout = 0
     conv1 = Lambda(squeeze)(img_input)
     if input_size[0] > 256:
         conv = Conv2D(nb_filter[0], (input_size[0] - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(conv1)
-        # prev_layer = BatchNormalization()(conv)
         prev_layer = activation_fun(conv)
 
         conv = Conv2D(nb_filter[0], (input_size[0] - 256 + 2) // 2, padding = 'valid', strides = 1, kernel_initializer = 'he_normal')(prev_layer)
-        # prev_layer = BatchNormalization()(conv)
         conv1 = activation_fun(conv)
+
     conv1_1 = standard_unit(conv1, stage='11', nb_filter=nb_filter[0], activation = activation_fun)
     pool1 = MaxPooling2D((2, 2), strides=(2, 2), name='pool1')(conv1_1)
 
@@ -123,12 +122,6 @@ def Nest_Net(input_size = (258,258,3,1), activation = 0, multiple = 32, dout = 0
 
 
 if __name__ == '__main__':
-
-    # model = U_Net(96,96,1)
-    # model.summary()
-    #
-    # model = wU_Net(96,96,1)
-    # model.summary()
 
     model = Nest_Net(input_size = (258,258,3,1))
     model.summary()
