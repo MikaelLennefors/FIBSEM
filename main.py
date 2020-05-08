@@ -74,7 +74,7 @@ callback_path = './results/{}/callback_masks/'.format(gpu)
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 10
+NO_OF_EPOCHS = 20
 max_count = 6
 k_fold = 3
 
@@ -193,13 +193,13 @@ def evaluate_network(parameters):
     net_lr = math.pow(10,-net_lr)
 
 
-    parameters = parameters[0]
-    net_drop = 0.3
-    net_filters = 32
-    net_lr = 1e-4
-    prop_elastic = 0
-    b_size = 3
-    preproc = 0
+    # parameters = parameters[0]
+    # net_drop = 0.3
+    # net_filters = 32
+    # net_lr = 1e-4
+    # prop_elastic = 0
+    # b_size = 3
+    # preproc = 0
 
     sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
     sys.stdout.flush()
@@ -262,10 +262,7 @@ def evaluate_network(parameters):
                             seed = np.random.RandomState(randoint)
                             img = x[j,:,:,k]
                             im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
-                            if channels > 1:
-                                x[j,:,:,k] = im_merge_t
-                            else:
-                                x[j,:,:,k] = im_merge_t.reshape(img.shape[0],img.shape[1])
+                            x[j,:,:,k] = im_merge_t
                         mask = y[j].copy().reshape(np.shape(train_mask)[1],np.shape(train_mask)[1])
                         seed = np.random.RandomState(randoint)
                         im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
@@ -285,14 +282,14 @@ def evaluate_network(parameters):
                 val_img_curr = val_img
                 test_img_curr = test_img
 
-            print('\n', np.min(x), '\t', np.max(x))
-            print(np.min(y), '\t', np.max(y))
-            print(np.min(test_img_curr), '\t', np.max(test_img_curr))
-            print(np.min(val_img_curr), '\t', np.max(val_img_curr))
-            print(np.min(val_mask), '\t', np.max(val_mask))
-            print(np.min(test_mask), '\t', np.max(test_mask))
+            # print('\n', np.min(x), '\t', np.max(x))
+            # print(np.min(y), '\t', np.max(y))
+            # print(np.min(test_img_curr), '\t', np.max(test_img_curr))
+            # print(np.min(val_img_curr), '\t', np.max(val_img_curr))
+            # print(np.min(val_mask), '\t', np.max(val_mask))
+            # print(np.min(test_mask), '\t', np.max(test_mask))
 
-            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
 
             count += 1
             if count >= max_count:
