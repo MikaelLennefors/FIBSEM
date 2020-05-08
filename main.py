@@ -71,12 +71,12 @@ pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
 #TODO WILL WE HA PARAMTERS SÅ HÄR?
-grid_split = 0
+grid_split = 1
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 20
-max_count = 6
-k_fold = 3
+NO_OF_EPOCHS = 1
+max_count = 1
+k_fold = 1
 
 elast_deform = True
 elast_alpha = 2
@@ -111,14 +111,14 @@ print('Number of epochs: ', NO_OF_EPOCHS, '\tMax count: ', max_count, '\tk fold:
 images, masks = extract_data(data_path, channels, standardize = False)
 test_img, test_mask = extract_data(test_path, channels, standardize = False)
 
-images_standardized, _ = extract_data(data_path, channels, standardize = True)
-test_img_standardized, _ = extract_data(test_path, channels, standardize = True)
+images_standardized, mask_stand = extract_data(data_path, channels, standardize = True)
+test_img_standardized, test_mask_stand = extract_data(test_path, channels, standardize = True)
 
 if grid_split > 1:
     images, masks = split_grid(images, masks, grid_split)
     test_img, test_mask = split_grid(test_img, test_mask, grid_split, test_set = True)
-    images_standardized, masks = split_grid(images_standardized, masks, grid_split)
-    test_img_standardized, test_mask = split_grid(test_img_standardized, test_mask, grid_split, test_set = True)
+    images_standardized, _ = split_grid(images_standardized, mask_stand, grid_split)
+    test_img_standardized, _ = split_grid(test_img_standardized, test_mask_stand, grid_split, test_set = True)
 
 t_gen = []
 t_gen_standardized = []
@@ -145,12 +145,17 @@ for i in range(k_fold):
 
         for j in range(bins):
             curr_img = img_poros[j]
+            print('curr_img=', np.shape(curr_img)[0])
+            print('min_pics / resampling_const=',min_pics / resampling_const)
             if np.shape(curr_img)[0] != min_pics / resampling_const:
                 indices = random.sample(list(curr_img), min_pics)
+                print('indices=', indices)
                 new_indices.extend(indices)
+                print(new_indices)
             else:
                 new_indices.extend(np.repeat(curr_img, resampling_const))
         new_indices = np.array(new_indices)
+        print(new_indices)
         train_images = train_images[new_indices]
         train_images_standardized = train_images_standardized[new_indices]
         train_mask = train_mask[new_indices]
@@ -322,14 +327,17 @@ def evaluate_network(parameters):
                 6: 'ZCA: 1e-5',
                 7: 'ZCA: 1e-6'}
 
-    result_dict.append({'Mean IoU': m1,
+    iteration_count += 1
+
+    result_dict.append({'Iteration': iteration_count,
+                    'Mean IoU': m1,
                     'Filters': net_filters,
                     'Learning rate': net_lr,
                     'Pre processing': pre_proc[preproc],
                     'Batch size': b_size,
                     'Dropout': net_drop,
                     'Elastic proportion': prop_elastic})
-    iteration_count += 1
+
 
     #print('One result appended')
     #exit_print(result_dict)
