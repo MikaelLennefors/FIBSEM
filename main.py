@@ -71,7 +71,7 @@ pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
 #TODO WILL WE HA PARAMTERS SÅ HÄR?
-grid_split = 1
+grid_split = 0
 grid_split = 2**grid_split
 
 NO_OF_EPOCHS = 1
@@ -100,10 +100,8 @@ max_intensity = 255.
 
 aug_args = dict(
             vertical_flip = True,
-            # horizontal_flip = True,
-            # shear_range = 0.01,
-            # rotation_range = 20,
-            # zoom_range = 0.01,
+            horizontal_flip = True,
+            rotation_range = 20,
             fill_mode = 'reflect'
         )
 print('Number of epochs: ', NO_OF_EPOCHS, '\tMax count: ', max_count, '\tk fold: ', k_fold, '\tGrid split: ', grid_split)
@@ -180,19 +178,19 @@ def evaluate_network(parameters):
     global iteration_count
     global test_img
     global result_dict
-    parameters = parameters[0]
-    net_drop = parameters[0]
-    net_filters = int(parameters[1])
-    net_lr = parameters[2]
-    prop_elastic = parameters[3]
-    b_size = int(parameters[4])
-    preproc = int(parameters[5])
+
+    net_drop = parameters['net_drop']
+    net_filters = parameters['net_filters']
+    net_lr = parameters['net_lr']
+    prop_elastic = parameters['prop_elastic']
+    b_size = parameters['b_size']
+    preproc = parameters['pre_processing']
 
     zero_weight = np.mean(train_mask)
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
 
-
+    # print(net_drop, net_filters, net_lr,prop_elastic ,b_size , preproc)
     # parameters = parameters[0]
     # net_drop = 0.3
     # net_filters = 32
@@ -201,17 +199,16 @@ def evaluate_network(parameters):
     # b_size = 3
     # preproc = 0
 
-    sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
-    sys.stdout.flush()
+    # sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
+    # sys.stdout.flush()
     for i in range(k_fold):
         if preproc == 0:
             train_gen = t_gen_standardized[i]
-            val_img = v_img_standardized[i]
-            test_img = test_img_standardized
+            val_img_stand = v_img_standardized[i]
+            test_img_stand = test_img_standardized
         else:
             train_gen = t_gen[i]
             val_img = v_img[i]
-            test_img = test_img
         val_mask = v_mask[i]
 
         input_size = np.shape(val_img)[1:]
@@ -279,8 +276,8 @@ def evaluate_network(parameters):
                 val_img_curr = val_img_zca
                 test_img_curr = test_img_zca
             else:
-                val_img_curr = val_img
-                test_img_curr = test_img
+                val_img_curr = val_img_stand
+                test_img_curr = test_img_stand
 
             # print('\n', np.min(x), '\t', np.max(x))
             # print(np.min(y), '\t', np.max(y))
@@ -289,7 +286,7 @@ def evaluate_network(parameters):
             # print(np.min(val_mask), '\t', np.max(val_mask))
             # print(np.min(test_mask), '\t', np.max(test_mask))
 
-            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
 
             count += 1
             if count >= max_count:
@@ -311,7 +308,7 @@ def evaluate_network(parameters):
         score = pred[1]
 
         mean_benchmark.append(score)
-    m1 = np.mean(mean_benchmark)
+    m1 = -np.mean(mean_benchmark)
 
     pre_proc = {0: 'Standardized',
                 1: 'Normalized',
@@ -337,7 +334,13 @@ def evaluate_network(parameters):
     #print('One result appended')
     #exit_print(result_dict)
     return m1
-
+from hyperopt import tpe
+from hyperopt import STATUS_OK
+from hyperopt import Trials
+from hyperopt import hp
+from hyperopt import fmin
+N_FOLDS = 10
+MAX_EVALS = 50
 def main():
     bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.3, 0.5)},
             {'name': 'net_filters', 'type': 'discrete', 'domain': (16, 32, 64)},
@@ -345,19 +348,34 @@ def main():
             {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)},
             {'name': 'b_size', 'type': 'discrete', 'domain': (1, 2, 3, 4, 5, 6)},
             {'name': 'pre_processing', 'type': 'discrete', 'domain': (0, 1, 2, 3, 4, 5, 6, 7)}]
+    space = {
+        'net_drop': hp.uniform('net_drop', 0.3, 0.5),
+        'net_filters': hp.choice('net_filters', [16, 32, 64]),
+        'net_lr': hp.uniform('net_lr', 3, 6),
+        'prop_elastic': hp.uniform('prop_elastic', 0, 0.2),
+        'b_size': hp.choice('b_size', [1, 2, 3, 4, 5, 6]),
+        'pre_processing': hp.choice('pre_processing', [0, 1, 2, 3, 4, 5, 6, 7])
+    }
+    tpe_algorithm = tpe.suggest
 
-    optimizer = BayesianOptimization(f=evaluate_network,
-                                     domain=bds,
-                                     model_type='GP',
-                                     acquisition_type ='EI',
-                                     acquisition_jitter = 0.05,
-                                     exact_feval=True,
-                                     maximize=True)
+    # Trials object to track progress
+    bayes_trials = Trials()
 
-    optimizer.run_optimization(max_iter=100)
+    # Optimize
+    best = fmin(fn = evaluate_network, space = space, algo = tpe.suggest, max_evals = MAX_EVALS, trials = bayes_trials)
 
-    optimizer.plot_acquisition()
-    optimizer.plot_convergence()
+    # optimizer = BayesianOptimization(f=evaluate_network,
+    #                                  domain=bds,
+    #                                  model_type='GP',
+    #                                  acquisition_type ='EI',
+    #                                  acquisition_jitter = 0.05,
+    #                                  exact_feval=True,
+    #                                  maximize=True)
+    #
+    # optimizer.run_optimization(max_iter=100)
+    #
+    # optimizer.plot_acquisition()
+    # optimizer.plot_convergence()
 
 if __name__ == '__main__':
     try:
