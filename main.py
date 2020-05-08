@@ -307,7 +307,7 @@ def evaluate_network(parameters):
         score = pred[1]
 
         mean_benchmark.append(score)
-    m1 = -np.mean(mean_benchmark)
+    m1 = np.mean(mean_benchmark)
 
     pre_proc = {0: 'Standardized',
                 1: 'Normalized',
@@ -332,7 +332,7 @@ def evaluate_network(parameters):
 
     #print('One result appended')
     #exit_print(result_dict)
-    return m1
+    return -m1
 from hyperopt import tpe
 from hyperopt import STATUS_OK
 from hyperopt import Trials
