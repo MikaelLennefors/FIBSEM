@@ -130,7 +130,7 @@ for i in range(k_fold):
     train_images, train_mask, val_images, val_mask = gen_data_split(images, masks, random_seed = i)
     train_images_standardized, train_mask, val_images_standardized, val_mask = gen_data_split(images_standardized, masks, random_seed = i)
     if grid_split > 1:
-        x = np.mean(train_mask, axis = (1,2,-1)) / max_intensity
+        x = np.mean(train_mask, axis = (1,2,-1))
         min_pics = np.shape(x)[0]
         img_poros = {}
         new_indices = []
@@ -145,17 +145,12 @@ for i in range(k_fold):
 
         for j in range(bins):
             curr_img = img_poros[j]
-            print('curr_img=', np.shape(curr_img)[0])
-            print('min_pics / resampling_const=',min_pics / resampling_const)
             if np.shape(curr_img)[0] != min_pics / resampling_const:
                 indices = random.sample(list(curr_img), min_pics)
-                print('indices=', indices)
                 new_indices.extend(indices)
-                print(new_indices)
             else:
                 new_indices.extend(np.repeat(curr_img, resampling_const))
         new_indices = np.array(new_indices)
-        print(new_indices)
         train_images = train_images[new_indices]
         train_images_standardized = train_images_standardized[new_indices]
         train_mask = train_mask[new_indices]
