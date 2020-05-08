@@ -205,13 +205,12 @@ def evaluate_network(parameters):
         if preproc == 0:
             train_gen = t_gen_standardized[i]
             val_img_stand = v_img_standardized[i]
-            test_img_stand = test_img_standardized
         else:
             train_gen = t_gen[i]
             val_img = v_img[i]
         val_mask = v_mask[i]
 
-        input_size = np.shape(val_img)[1:]
+        input_size = np.shape(images)[1:]
         m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
         # m = Nest_Net(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
         # m = MultiResUnet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
@@ -277,7 +276,7 @@ def evaluate_network(parameters):
                 test_img_curr = test_img_zca
             else:
                 val_img_curr = val_img_stand
-                test_img_curr = test_img_stand
+                test_img_curr = test_img_standardized
 
             # print('\n', np.min(x), '\t', np.max(x))
             # print(np.min(y), '\t', np.max(y))
