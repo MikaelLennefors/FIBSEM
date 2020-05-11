@@ -49,10 +49,19 @@ print(gpu)
 
 if len(sys.argv) > 2:
     channels = int(sys.argv[2])
-if channels == 1:
+net = 0
+if len(sys.argv) > 3:
+    net = int(sys.argv[3])
+
+if net == 0:
     network = 'unet'
-if channels > 1:
+if net == 1:
     network = 'dunet'
+if net == 2:
+    network = 'multiresunet'
+if net == 3:
+    network = 'nestnet'
+
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
 
 if gpu == 'Xp':
@@ -218,10 +227,16 @@ def evaluate_network(parameters):
         val_mask = v_mask[i]
 
         input_size = np.shape(images)[1:]
-        # m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
-        m = Nest_Net(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
-        # m = MultiResUnet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
-        # m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        if network == 'unet':
+            m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        elif network == 'dunet':
+            m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        elif network == 'multiresunet':
+            m = MultiResUnet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        elif network == 'nestnet':
+            m = Nest_Net(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+
+
         m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_iou_loss(zero_weight), metrics = [losses.iou_coef, 'accuracy'])
 
         # earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
