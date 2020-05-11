@@ -5,7 +5,10 @@ import sys
 
 def exit_print(list_of_dicts, gpu, network, channels):
     print('\n-')
-    max_lines = int(input("Input the number of top results to print: "))
+    try:
+        max_lines = int(input("Input the number of top results to print: "))
+    except:
+        max_lines = len(list_of_dicts)
     print('-')
     max_lines = min(len(list_of_dicts), max_lines)
     if max_lines < 1:
