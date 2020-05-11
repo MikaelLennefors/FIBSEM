@@ -6,6 +6,7 @@ import random
 import sys
 import tabulate
 import pandas as pd
+import time
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
@@ -70,13 +71,16 @@ weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
+
+max_hours = 66
+
 #TODO WILL WE HA PARAMTERS SÅ HÄR?
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 1
-max_count = 1
-k_fold = 1
+NO_OF_EPOCHS = 40
+max_count = 5
+k_fold = 3
 
 elast_deform = True
 elast_alpha = 2
@@ -104,7 +108,10 @@ aug_args = dict(
             rotation_range = 20,
             fill_mode = 'reflect'
         )
-print('Number of epochs: ', NO_OF_EPOCHS, '\tMax count: ', max_count, '\tk fold: ', k_fold, '\tGrid split: ', grid_split)
+
+end_time = time.time() + max_hours*60*60
+current_time = time.strftime("%H:%M:%S", time.localtime())
+print('Current time:', current_time, '\nNumber of epochs:', NO_OF_EPOCHS, '\nMax count:', max_count, '\nk fold:', k_fold, '\nGrid split:', grid_split)
 
 images, masks = extract_data(data_path, channels, standardize = False)
 test_img, test_mask = extract_data(test_path, channels, standardize = False)
@@ -211,8 +218,8 @@ def evaluate_network(parameters):
         val_mask = v_mask[i]
 
         input_size = np.shape(images)[1:]
-        m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
-        # m = Nest_Net(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        # m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
+        m = Nest_Net(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
         # m = MultiResUnet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
         # m = D_Unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
         m.compile(optimizer = Adam(lr = net_lr), loss = losses.bce_iou_loss(zero_weight), metrics = [losses.iou_coef, 'accuracy'])
@@ -284,8 +291,9 @@ def evaluate_network(parameters):
             # print(np.min(val_img_curr), '\t', np.max(val_img_curr))
             # print(np.min(val_mask), '\t', np.max(val_mask))
             # print(np.min(test_mask), '\t', np.max(test_mask))
-
-            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
+            if time.time() > end_time:
+                raise KeyboardInterrupt
+            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
 
             count += 1
             if count >= max_count:
@@ -339,7 +347,7 @@ from hyperopt import Trials
 from hyperopt import hp
 from hyperopt import fmin
 N_FOLDS = 10
-MAX_EVALS = 50
+MAX_EVALS = 100
 def main():
     bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.3, 0.5)},
             {'name': 'net_filters', 'type': 'discrete', 'domain': (16, 32, 64)},
@@ -381,4 +389,6 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print('Interrupted')
+        exit_print(result_dict, gpu, network, channels)
+    except:
         exit_print(result_dict, gpu, network, channels)
