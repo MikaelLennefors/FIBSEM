@@ -81,14 +81,14 @@ pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
 
-max_hours = 66
+max_hours = 48
 
 #TODO WILL WE HA PARAMTERS SÅ HÄR?
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 40
-max_count = 5
+NO_OF_EPOCHS = 60
+max_count = 3
 k_fold = 3
 
 elast_deform = True
@@ -337,9 +337,7 @@ def evaluate_network(parameters):
                 2: 'ZCA: 1e-1',
                 3: 'ZCA: 1e-2',
                 4: 'ZCA: 1e-3',
-                5: 'ZCA: 1e-4',
-                6: 'ZCA: 1e-5',
-                7: 'ZCA: 1e-6'}
+                5: 'ZCA: 1e-4'}
 
     iteration_count += 1
 
@@ -364,19 +362,13 @@ from hyperopt import fmin
 N_FOLDS = 10
 MAX_EVALS = 100
 def main():
-    bds = [{'name': 'net_drop', 'type': 'continuous', 'domain': (0.3, 0.5)},
-            {'name': 'net_filters', 'type': 'discrete', 'domain': (16, 32, 64)},
-            {'name': 'net_lr', 'type': 'continuous', 'domain': (3, 6)},
-            {'name': 'prop_elastic', 'type': 'continuous', 'domain': (0, 0.2)},
-            {'name': 'b_size', 'type': 'discrete', 'domain': (1, 2, 3, 4, 5, 6)},
-            {'name': 'pre_processing', 'type': 'discrete', 'domain': (0, 1, 2, 3, 4, 5, 6, 7)}]
     space = {
         'net_drop': hp.uniform('net_drop', 0.3, 0.5),
-        'net_filters': hp.choice('net_filters', [16, 32, 64]),
-        'net_lr': hp.uniform('net_lr', 3, 6),
+        'net_filters': hp.choice('net_filters', [32, 64]),
+        'net_lr': hp.uniform('net_lr', 3, 5),
         'prop_elastic': hp.uniform('prop_elastic', 0, 0.2),
         'b_size': hp.choice('b_size', [1, 2, 3, 4, 5, 6]),
-        'pre_processing': hp.choice('pre_processing', [0, 1, 2, 3, 4, 5, 6, 7])
+        'pre_processing': hp.choice('pre_processing', [0, 1, 2, 3, 4, 5])
     }
     tpe_algorithm = tpe.suggest
 
@@ -386,18 +378,6 @@ def main():
     # Optimize
     best = fmin(fn = evaluate_network, space = space, algo = tpe.suggest, max_evals = MAX_EVALS, trials = bayes_trials)
 
-    # optimizer = BayesianOptimization(f=evaluate_network,
-    #                                  domain=bds,
-    #                                  model_type='GP',
-    #                                  acquisition_type ='EI',
-    #                                  acquisition_jitter = 0.05,
-    #                                  exact_feval=True,
-    #                                  maximize=True)
-    #
-    # optimizer.run_optimization(max_iter=100)
-    #
-    # optimizer.plot_acquisition()
-    # optimizer.plot_convergence()
 
 if __name__ == '__main__':
     try:

@@ -46,9 +46,9 @@ class EarlyStoppingBaseline(tf.keras.callbacks.Callback):
             # print('Restoring model weights from the end of the best epoch.')
             # self.model.set_weights(self.best_weights)
 
-  def on_train_end(self, logs=None):
-    if self.stopped_epoch > 0:
-      print('Epoch %05d: early stopping baseline'  % (self.stopped_epoch + 1))
+  # def on_train_end(self, logs=None):
+  #   if self.stopped_epoch > 0:
+  #     print('Epoch %05d: early stopping baseline'  % (self.stopped_epoch + 1))
 
 class EarlyStoppingDelta(tf.keras.callbacks.Callback):
   """Stop training when the loss is at its min, i.e. the loss stops decreasing.
@@ -82,7 +82,7 @@ class EarlyStoppingDelta(tf.keras.callbacks.Callback):
           if self.wait >= self.patience:
             self.stopped_epoch = epoch
             self.model.stop_training = True
-
-  def on_train_end(self, logs=None):
-    if self.stopped_epoch > 0:
-      print('Epoch %05d: early stopping min delta' % (self.stopped_epoch + 1))
+  #
+  # def on_train_end(self, logs=None):
+  #   if self.stopped_epoch > 0:
+  #     print('Epoch %05d: early stopping min delta' % (self.stopped_epoch + 1))
