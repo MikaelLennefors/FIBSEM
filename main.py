@@ -45,8 +45,6 @@ if len(sys.argv) > 1:
     if int(sys.argv[1]) == 1:
         gpu = 'V'
 
-print(gpu)
-
 if len(sys.argv) > 2:
     channels = int(sys.argv[2])
 net = 0
@@ -120,7 +118,7 @@ aug_args = dict(
 
 end_time = time.time() + max_hours*60*60
 current_time = time.strftime("%H:%M:%S", time.localtime())
-print('Current time:', current_time, '\nNumber of epochs:', NO_OF_EPOCHS, '\nMax count:', max_count, '\nk fold:', k_fold, '\nGrid split:', grid_split)
+print('Current time:', current_time, '\nGPU:', gpu, '\nNetwork:', network, '\nChannels:', channels,'\nNumber of epochs:', NO_OF_EPOCHS, '\nMax count:', max_count, '\nk fold:', k_fold, '\nGrid split:', grid_split)
 
 images, masks = extract_data(data_path, channels, standardize = False)
 test_img, test_mask = extract_data(test_path, channels, standardize = False)
@@ -356,7 +354,7 @@ def main():
     tpe_algorithm = tpe.suggest
 
     bayes_trials = Trials()
-    
+
     best = fmin(fn = evaluate_network, space = space, algo = tpe.suggest, max_evals = MAX_EVALS, trials = bayes_trials)
 
 
