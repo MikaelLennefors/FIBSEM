@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objs as go
 
 gpu = int(input("Choose GPU, 0 for Xp, 1 for V: "))
 
@@ -10,68 +11,70 @@ else:
  	path = '../results/V/'
 
 network = input('Choose network, unet, dunet, multi, nesnet: ')
-
-if network == 'unet':
-    path = path + 'unet_'
-elif network == 'dunet':
- 	path = path + 'dunet_'
-elif network == 'multi':
- 	path = path + 'multi_'
-elif network == 'nesnet':
- 	path = path + 'nesnet_'
-
+path = path  + network + '_'
 channels = int(input('Number of channels: '))
-
-if channels == 1:
-    path = path +  str(channels) + '_channels.csv'
-elif channels == 3:
- 	path = path +  str(channels) + '_channels.csv'
-elif channels == 5:
- 	path = path +  str(channels) + '_channels.csv'
-elif channels == 7:
- 	path = path +  str(channels) + '_channels.csv'
-
+path = path + str(channels)+ '_channels.csv'
 result = pd.read_csv(path, sep=",", usecols=(2, 3, 4, 5, 6, 7, 8))# , header=None
-# result = result.applymap(str)
-#print(result['val_iou'].to_numpy())
-# for i in range(len(result['val_iou'].to_numpy())):
-# 	splittat = result['val_iou'].to_numpy()[i].split('0.')
-# 	if len(splittat) > 1:
-# 		result['val_iou'].iloc[i] = '0.' + splittat[1]
-# 	else:
-# 		result['val_iou'].iloc[i] = splittat[0]
 
-# result['val_iou'] = pd.to_numeric(result['val_iou'])
-# for i in result.columns:
-# 	print(i, result[i].unique())
-# #print(result['prop_elastic'].unique())
-# raise
+count = 0
+for val in result['Pre processing']:
+    if val == 'Standardized':
+        result.at[count, 'Pre processing'] = 0
+    if val == 'Normalized':
+        result.at[count, 'Pre processing'] = 1
+    if val == 'ZCA: 1e-1':
+        result.at[count, 'Pre processing'] = 2
+    if val == 'ZCA: 1e-2':
+        result.at[count, 'Pre processing'] = 3
+    if val == 'ZCA: 1e-3':
+        result.at[count, 'Pre processing'] = 4
+    if val == 'ZCA: 1e-4':
+        result.at[count, 'Pre processing'] = 5
+    count = count + 1
 
-# result.columns = ['net_filters','net_lr','net_bin_split','net_beta1','net_beta2','net_drop','net_activ_fun','prop_elastic', 'val_iou','val_accuracy']
-#result.columns = ['net_filters','net_lr','net_bin_split', 'val_iou','val_accuracy']
-
-
-
-# Sort after bes IoU
-# result.sort_values(by=['val_iou'])
-
-# Convert som paramters to right log scale
-# result['net_filters'] = np.log2(result['net_filters'])
-# result['net_lr'] = np.log10(result['net_lr'])
-# result['net_beta2'] = -1*np.log10(1 - result['net_beta2'])
-
-# # Print 10 best reults
-# np.set_printoptions(suppress=True)
-# print('The top 10 best results are:\n')
-# result = result.sort_values(by=['val_iou'], ascending=False)
-# print(result.head(10))
-#
-# # Remove accuracy from the fram to plot in parallelogram
-# parallel_frame = result.iloc[:,0:result.shape[1]]
+result['Pre processing'] = result['Pre processing'].astype(int)
 
 # Plot with plotly
-fig = px.parallel_coordinates(result, color = 'Mean IoU',
-                             color_continuous_scale=px.colors.sequential.Inferno,
-                             color_continuous_midpoint=0.5)
-fig.layout.title = network
-fig.write_html('first_figure.html', auto_open=True)
+# fig = px.parallel_coordinates(result, color = 'Mean IoU',
+#                              color_continuous_scale=px.colors.diverging.Tealrose,
+#                              color_continuous_midpoint=0.5.
+#                              dimensions = list([
+#                             dict(range = [0,5],
+#                                  tickvals = [0,1,2,3,4,5],
+#                                  label = 'Pre processing',values = result['Pre processing'],
+#                                  ticktext = ['Standardized', 'Normalized', 'ZCA: 1e-1', 'ZCA: 1e-2', 'ZCA: 1e-3', 'ZCA: 1e-4']),
+#                         ])
+# fig.layout.title = network
+# fig.write_html('first_figure.html', auto_open=True)
+
+df = pd.read_csv("https://raw.githubusercontent.com/bcdunbar/datasets/master/parcoords_data.csv")
+
+fig = go.Figure(data=
+    go.Parcoords(
+        line = dict(color = result['Mean IoU'],
+                   colorscale = 'Electric',
+                   showscale = True,
+                   cmin = 0,
+                   cmax = 1),
+        dimensions = list([
+            dict(range = [0,1],
+                 constraintrange = [100000,150000],
+                 label = "Block Height", values = df['blockHeight']),
+            dict(range = [0,700000],
+                 label = 'Block Width', values = df['blockWidth']),
+            dict(tickvals = [0,0.5,1,2,3],
+                 ticktext = ['A','AB','B','Y','Z'],
+                 label = 'Cyclinder Material', values = df['cycMaterial']),
+            dict(range = [-1,4],
+                 tickvals = [0,1,2,3],
+                 label = 'Block Material', values = df['blockMaterial']),
+            dict(range = [134,3154],
+                 visible = True,
+                 label = 'Total Weight', values = df['totalWeight']),
+            dict(range = [9,19984],
+                 label = 'Assembly Penalty Wt', values = df['assemblyPW']),
+            dict(range = [49000,568000],
+                 label = 'Height st Width', values = df['HstW'])])
+    )
+)
+fig.show()
