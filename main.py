@@ -206,17 +206,6 @@ def evaluate_network(parameters):
     mean_benchmark = []
     net_lr = math.pow(10,-net_lr)
 
-    # print(net_drop, net_filters, net_lr,prop_elastic ,b_size , preproc)
-    # parameters = parameters[0]
-    # net_drop = 0.3
-    # net_filters = 32
-    # net_lr = 1e-4
-    # prop_elastic = 0
-    # b_size = 3
-    # preproc = 0
-
-    # sys.stdout.write("\rNumber of Bayesian iterations: {}".format(iteration_count))
-    # sys.stdout.flush()
     for i in range(k_fold):
         if preproc == 0:
             train_gen = t_gen_standardized[i]
@@ -300,12 +289,6 @@ def evaluate_network(parameters):
                 val_img_curr = val_img_stand
                 test_img_curr = test_img_standardized
 
-            # print('\n', np.min(x), '\t', np.max(x))
-            # print(np.min(y), '\t', np.max(y))
-            # print(np.min(test_img_curr), '\t', np.max(test_img_curr))
-            # print(np.min(val_img_curr), '\t', np.max(val_img_curr))
-            # print(np.min(val_mask), '\t', np.max(val_mask))
-            # print(np.min(test_mask), '\t', np.max(test_mask))
             if time.time() > end_time:
                 raise KeyboardInterrupt
             results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
@@ -372,10 +355,8 @@ def main():
     }
     tpe_algorithm = tpe.suggest
 
-    # Trials object to track progress
     bayes_trials = Trials()
-
-    # Optimize
+    
     best = fmin(fn = evaluate_network, space = space, algo = tpe.suggest, max_evals = MAX_EVALS, trials = bayes_trials)
 
 
