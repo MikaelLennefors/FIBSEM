@@ -23,6 +23,6 @@ def exit_print(list_of_dicts, gpu, network, channels):
     test.to_csv('./results/{}/{}_{}_channels.csv'.format(gpu, network, channels), index_label = 'Index')
 
     print('\n\n')
-    print(tabulate.tabulate(test, headers='keys', tablefmt="fancy_grid", stralign="right", floatfmt=("d", "d", ".3f", "2d", ".2e", "d", "d", ".3f", ".3f")))
+    print(tabulate.tabulate(test, headers='keys', tablefmt="fancy_grid", stralign="right", floatfmt=("d", "d", ".3f", "d", ".3e", "s", ".3e", "d", ".3f", ".3f")))
     print('\n\n')
     sys.exit()

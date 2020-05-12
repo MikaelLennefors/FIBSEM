@@ -78,7 +78,6 @@ weights_path = './results/{}/weights'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
-
 max_hours = 48
 
 #TODO WILL WE HA PARAMTERS SÅ HÄR?
@@ -121,16 +120,16 @@ current_time = time.strftime("%H:%M:%S", time.localtime())
 print('Current time:', current_time, '\nGPU:', gpu, '\nNetwork:', network, '\nChannels:', channels,'\nNumber of epochs:', NO_OF_EPOCHS, '\nMax count:', max_count, '\nk fold:', k_fold, '\nGrid split:', grid_split)
 
 images, masks = extract_data(data_path, channels, standardize = False)
-test_img, test_mask = extract_data(test_path, channels, standardize = False)
+test_images, test_masks = extract_data(test_path, channels, standardize = False)
 
-images_standardized, mask_stand = extract_data(data_path, channels, standardize = True)
-test_img_standardized, test_mask_stand = extract_data(test_path, channels, standardize = True)
+images_standardized, masks_standardized = extract_data(data_path, channels, standardize = True)
+test_images_standardized, test_masks_standardized = extract_data(test_path, channels, standardize = True)
 
 if grid_split > 1:
     images, masks = split_grid(images, masks, grid_split)
-    test_img, test_mask = split_grid(test_img, test_mask, grid_split, test_set = True)
-    images_standardized, _ = split_grid(images_standardized, mask_stand, grid_split)
-    test_img_standardized, _ = split_grid(test_img_standardized, test_mask_stand, grid_split, test_set = True)
+    test_images, test_masks = split_grid(test_images, test_masks, grid_split, test_set = True)
+    images_standardized, _ = split_grid(images_standardized, masks_standardized, grid_split)
+    test_images_standardized, _ = split_grid(test_images_standardized, test_masks_standardized, grid_split, test_set = True)
 
 t_gen = []
 t_gen_standardized = []
@@ -139,10 +138,10 @@ v_img_standardized = []
 v_mask = []
 
 for i in range(k_fold):
-    train_images, train_mask, val_images, val_mask = gen_data_split(images, masks, random_seed = i)
-    train_images_standardized, train_mask, val_images_standardized, val_mask = gen_data_split(images_standardized, masks, random_seed = i)
+    train_images, train_masks, val_images, val_masks = gen_data_split(images, masks, random_seed = i)
+    train_images_standardized, train_masks, val_images_standardized, val_masks = gen_data_split(images_standardized, masks, random_seed = i)
     if grid_split > 1:
-        x = np.mean(train_mask, axis = (1,2,-1))
+        x = np.mean(train_masks, axis = (1,2,-1))
         min_pics = np.shape(x)[0]
         img_poros = {}
         new_indices = []
@@ -165,54 +164,59 @@ for i in range(k_fold):
         new_indices = np.array(new_indices)
         train_images = train_images[new_indices]
         train_images_standardized = train_images_standardized[new_indices]
-        train_mask = train_mask[new_indices]
+        train_masks = train_masks[new_indices]
     train_images = train_images.reshape(-1, np.shape(train_images)[1], np.shape(train_images)[2], channels, 1)
     train_images_standardized = train_images_standardized.reshape(-1, np.shape(train_images_standardized)[1], np.shape(train_images_standardized)[2], channels, 1)
 
-    train_mask = train_mask.reshape(-1, np.shape(train_mask)[1], np.shape(train_mask)[2], 1)
+    train_masks = train_masks.reshape(-1, np.shape(train_masks)[1], np.shape(train_masks)[2], 1)
 
     aug_batch = np.shape(train_images)[0]
 
-    train_gen = gen_aug(train_images, train_mask, aug_args, aug_batch)
-    train_gen_standardized = gen_aug(train_images_standardized, train_mask, aug_args, aug_batch)
+    train_generator = gen_aug(train_images, train_masks, aug_args, aug_batch)
+    train_generator_standardized = gen_aug(train_images_standardized, train_masks, aug_args, aug_batch)
 
-    t_gen.append(train_gen)
-    t_gen_standardized.append(train_gen_standardized)
+    t_gen.append(train_generator)
+    t_gen_standardized.append(train_generator_standardized)
     v_img.append(val_images)
     v_img_standardized.append(val_images_standardized)
-    v_mask.append(val_mask)
+    v_mask.append(val_masks)
 
 result_dict = []
 
-
+v_img = np.array(v_img)
 
 iteration_count = 0
 
 def evaluate_network(parameters):
     global iteration_count
-    global test_img
+    global test_images
     global result_dict
 
     net_drop = parameters['net_drop']
     net_filters = parameters['net_filters']
     net_lr = parameters['net_lr']
     prop_elastic = parameters['prop_elastic']
-    b_size = parameters['b_size']
+    b_size = int(parameters['b_size'])
     preproc = parameters['pre_processing']
 
-    zero_weight = np.mean(train_mask)
+    zero_weight = np.mean(train_masks)
     mean_benchmark = []
-    net_lr = math.pow(10,-net_lr)
+    train_gen = t_gen
+    if preproc['type'] == 'Standardize':
+        train_gen = t_gen_standardized
+        val_img = v_img_standardized
+        test_img = test_images_standardized
+    elif preproc['type'] == 'Normalize':
+        val_img = v_img / max_intensity
+        test_img = test_images / max_intensity
+    elif preproc['type'] == 'ZCA':
+        val_img = zca_whitening(v_img, preproc['whitening'])
+        test_img = zca_whitening(test_images, preproc['whitening'])
 
-    for i in range(k_fold):
-        if preproc == 0:
-            train_gen = t_gen_standardized[i]
-            val_img_stand = v_img_standardized[i]
-        else:
-            train_gen = t_gen[i]
-            val_img = v_img[i]
-        val_mask = v_mask[i]
-
+    for data in zip(train_gen, val_img, v_mask):
+        train = data[0]
+        validation_img = data[1]
+        validation_mask = data[2]
         input_size = np.shape(images)[1:]
         if network == 'unet':
             m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
@@ -234,15 +238,7 @@ def evaluate_network(parameters):
 
         count = 0
 
-        if preproc == 1:
-            val_img_norm = val_img / max_intensity
-            test_img_norm = test_img / max_intensity
-        elif preproc > 1:
-            whitening = 10**-(preproc - 1)
-            val_img_zca = zca_whitening(val_img, whitening)
-            test_img_zca = zca_whitening(test_img, whitening)
-
-        for c in train_gen:
+        for c in train:
             y = np.array(c[-1])
             x = []
             for j in range(len(c) - 1):
@@ -252,14 +248,12 @@ def evaluate_network(parameters):
             x = np.swapaxes(x,0,1)
             x = np.swapaxes(x,1,2)
             x = np.swapaxes(x,2,3)
-
-            if preproc == 1:
+            if preproc['type'] == 'Normalize':
                 x = x / max_intensity
-            elif preproc > 1:
-                whitening = 10**-(preproc - 1)
-                x = zca_whitening(x, whitening)
+            elif preproc['type'] == 'ZCA':
+                x = zca_whitening(x, preproc['whitening'])
 
-            if elast_deform == True:
+            if prop_elastic > 0:
                 for j in range(np.shape(x)[0]):
                     if random.random() < prop_elastic:
                         randoint = random.randint(0, 1e3)
@@ -268,28 +262,18 @@ def evaluate_network(parameters):
                             img = x[j,:,:,k]
                             im_merge_t = elastic_transform(img, img.shape[1] * elast_alpha, img.shape[1] * elast_sigma, img.shape[1] * elast_affine_alpha, random_state = seed)
                             x[j,:,:,k] = im_merge_t
-                        mask = y[j].copy().reshape(np.shape(train_mask)[1],np.shape(train_mask)[1])
+                        mask = y[j].copy().reshape(np.shape(train_masks)[1],np.shape(train_masks)[1])
                         seed = np.random.RandomState(randoint)
                         im_mask_t = elastic_transform(mask, mask.shape[1] * elast_alpha, mask.shape[1] * elast_sigma, mask.shape[1] * elast_affine_alpha, random_state = seed)
                         y[j] = im_mask_t
             y = np.around(y)
-            max_val = max(np.max(y), np.max(val_mask))
+            max_val = max(np.max(y), np.max(validation_mask))
             if max_val > 1:
                 raise
 
-            if preproc == 1:
-                val_img_curr = val_img_norm
-                test_img_curr = test_img_norm
-            elif preproc > 1:
-                val_img_curr = val_img_zca
-                test_img_curr = test_img_zca
-            else:
-                val_img_curr = val_img_stand
-                test_img_curr = test_img_standardized
-
             if time.time() > end_time:
                 raise KeyboardInterrupt
-            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(val_img_curr, val_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
 
             count += 1
             if count >= max_count:
@@ -307,18 +291,11 @@ def evaluate_network(parameters):
         #         for countttt in range(2):
         #             weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
 
-        pred = m.evaluate(test_img_curr, test_mask, verbose = 0)
+        pred = m.evaluate(test_img, test_masks, verbose = 0)
         score = pred[1]
 
         mean_benchmark.append(score)
     m1 = np.mean(mean_benchmark)
-
-    pre_proc = {0: 'Standardized',
-                1: 'Normalized',
-                2: 'ZCA: 1e-1',
-                3: 'ZCA: 1e-2',
-                4: 'ZCA: 1e-3',
-                5: 'ZCA: 1e-4'}
 
     iteration_count += 1
 
@@ -326,7 +303,8 @@ def evaluate_network(parameters):
                     'Mean IoU': m1,
                     'Filters': net_filters,
                     'Learning rate': net_lr,
-                    'Pre processing': pre_proc[preproc],
+                    'Pre processing': preproc['type'],
+                    'Whitening': preproc['whitening'],
                     'Batch size': b_size,
                     'Dropout': net_drop,
                     'Elastic proportion': prop_elastic})
@@ -346,10 +324,13 @@ def main():
     space = {
         'net_drop': hp.uniform('net_drop', 0.3, 0.5),
         'net_filters': hp.choice('net_filters', [32, 64]),
-        'net_lr': hp.uniform('net_lr', 3, 5),
+        'net_lr': hp.loguniform('net_lr', -math.log(10)*4.9, -math.log(10)*3.2),
         'prop_elastic': hp.uniform('prop_elastic', 0, 0.2),
-        'b_size': hp.choice('b_size', [1, 2, 3, 4, 5, 6]),
-        'pre_processing': hp.choice('pre_processing', [0, 1, 2, 3, 4, 5])
+        'b_size': hp.quniform('b_size', 1, 6, 1),
+        'pre_processing': hp.choice('pre_processing', [{'type': 'Standardize', 'whitening': 0},
+                                                        {'type': 'Normalize', 'whitening': 0},
+                                                        {'type': 'ZCA',
+                                                        'whitening': hp.loguniform('whitening', -math.log(10)*4, -math.log(10))}])
     }
     tpe_algorithm = tpe.suggest
 
@@ -363,6 +344,4 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print('Interrupted')
-        exit_print(result_dict, gpu, network, channels)
-    except:
         exit_print(result_dict, gpu, network, channels)
