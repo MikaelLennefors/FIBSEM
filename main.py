@@ -210,8 +210,12 @@ def evaluate_network(parameters):
         val_img = v_img / max_intensity
         test_img = test_images / max_intensity
     elif preproc['type'] == 'ZCA':
-        val_img = zca_whitening(v_img, preproc['whitening'])
-        test_img = zca_whitening(test_images, preproc['whitening'])
+        val_img = []
+        for i in range(k_fold):
+            val_img.append(zca_whitening(v_img[i], preproc['whitening']))
+            test_img = zca_whitening(test_images, preproc['whitening'])
+
+
 
     for data in zip(train_gen, val_img, v_mask):
         train = data[0]
@@ -273,7 +277,8 @@ def evaluate_network(parameters):
 
             if time.time() > end_time:
                 raise KeyboardInterrupt
-            results = m.fit(x, y, verbose = 1, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
+            # print("hi")
+            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
 
             count += 1
             if count >= max_count:
@@ -344,4 +349,7 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print('Interrupted')
+        exit_print(result_dict, gpu, network, channels)
+    except:
+        print('Error')
         exit_print(result_dict, gpu, network, channels)
