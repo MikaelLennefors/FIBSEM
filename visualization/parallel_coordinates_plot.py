@@ -30,51 +30,53 @@ for val in result['Pre processing']:
         result.at[count, 'Pre processing'] = 4
     if val == 'ZCA: 1e-4':
         result.at[count, 'Pre processing'] = 5
+    if val == 'ZCA: 1e-5':
+        result.at[count, 'Pre processing'] = 6
+    if val == 'ZCA: 1e-6':
+        result.at[count, 'Pre processing'] = 7
     count = count + 1
 
 result['Pre processing'] = result['Pre processing'].astype(int)
+result['Filters'] = np.log2(result['Filters'])
+result['Learning rate'] = -1*np.log10(result['Learning rate'])
 
-# Plot with plotly
-# fig = px.parallel_coordinates(result, color = 'Mean IoU',
-#                              color_continuous_scale=px.colors.diverging.Tealrose,
-#                              color_continuous_midpoint=0.5.
-#                              dimensions = list([
-#                             dict(range = [0,5],
-#                                  tickvals = [0,1,2,3,4,5],
-#                                  label = 'Pre processing',values = result['Pre processing'],
-#                                  ticktext = ['Standardized', 'Normalized', 'ZCA: 1e-1', 'ZCA: 1e-2', 'ZCA: 1e-3', 'ZCA: 1e-4']),
-#                         ])
-# fig.layout.title = network
-# fig.write_html('first_figure.html', auto_open=True)
-
-df = pd.read_csv("https://raw.githubusercontent.com/bcdunbar/datasets/master/parcoords_data.csv")
+test = 'prut ' + result['Learning rate'].astype(str)
+test = list(test)
+# print(test.type)
+# raise
 
 fig = go.Figure(data=
     go.Parcoords(
         line = dict(color = result['Mean IoU'],
-                   colorscale = 'Electric',
+                   colorscale = 'Viridis',
                    showscale = True,
                    cmin = 0,
-                   cmax = 1),
+                   cmax = 0.8),
         dimensions = list([
-            dict(range = [0,1],
-                 constraintrange = [100000,150000],
-                 label = "Block Height", values = df['blockHeight']),
-            dict(range = [0,700000],
-                 label = 'Block Width', values = df['blockWidth']),
-            dict(tickvals = [0,0.5,1,2,3],
-                 ticktext = ['A','AB','B','Y','Z'],
-                 label = 'Cyclinder Material', values = df['cycMaterial']),
-            dict(range = [-1,4],
-                 tickvals = [0,1,2,3],
-                 label = 'Block Material', values = df['blockMaterial']),
-            dict(range = [134,3154],
-                 visible = True,
-                 label = 'Total Weight', values = df['totalWeight']),
-            dict(range = [9,19984],
-                 label = 'Assembly Penalty Wt', values = df['assemblyPW']),
-            dict(range = [49000,568000],
-                 label = 'Height st Width', values = df['HstW'])])
+            dict(range = [3,6],
+                 label = '-log10(Learning rate)', values = result['Learning rate']),
+            dict(tickvals = [4,5,6],
+                 ticktext = ['16','32','64'],
+                 label = 'Filters', values = result['Filters']),
+            dict(tickvals = [0,1,2,3,4,5,6,7],
+                 ticktext = ['Standardized','Normalized','ZCA: 1e-1', 'ZCA: 1e-2', 'ZCA: 1e-3', 'ZCA: 1e-4', 'ZCA: 1e-5', 'ZCA: 1e-6'],
+                 label = 'Pre processing', values = result['Pre processing']),
+            dict(tickvals = [0,1,2,3,4,5,6],
+                 ticktext = ['0','1','2','3','4','5','6'],
+                 label = 'Batch size', values = result['Batch size']),
+            dict(range = [0.3,0.5],
+                 label = 'Dropout', values = result['Dropout']),
+            dict(range = [0,0.2],
+                 label = 'Elastic proportion', values = result['Elastic proportion']),
+            dict(range = [0,0.8],
+                label = 'Mean IoU', values = result['Mean IoU'])])
     )
 )
+fig.update_layout(
+    title={
+        'text': "Hyperparameter space for " + network,
+        'y':0.9,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'})
 fig.show()
