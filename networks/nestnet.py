@@ -36,9 +36,9 @@ Total params: 9,041,601
 """
 def Nest_Net(input_size = (258,258,3,1), activation = 0, multiple = 32, dout = 0.5):
 
-    nb_filter = [multiple,2*multiple,4*multiple,8*multiple,16*multiple]
-
     keras.clear_session()
+    
+    nb_filter = [multiple,2*multiple,4*multiple,8*multiple,16*multiple]
 
     if activation == 0:
        activation_fun = elu

@@ -84,9 +84,9 @@ max_hours = 48
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 60
-max_count = 3
-k_fold = 3
+NO_OF_EPOCHS = 12
+max_count = 10
+k_fold = 1
 
 elast_deform = True
 elast_alpha = 2
@@ -199,6 +199,13 @@ def evaluate_network(parameters):
     b_size = int(parameters['b_size'])
     preproc = parameters['pre_processing']
 
+    print('net_drop:', net_drop)
+    print('net_filters:', net_filters)
+    print('net_lr:', net_lr)
+    print('prop_elastic:', prop_elastic)
+    print('b_size:', b_size)
+    print('preproc:', preproc)
+
     zero_weight = np.mean(train_masks)
     mean_benchmark = []
     train_gen = t_gen
@@ -278,7 +285,7 @@ def evaluate_network(parameters):
             if time.time() > end_time:
                 raise KeyboardInterrupt
             # print("hi")
-            results = m.fit(x, y, verbose = 0, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
+            results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
 
             count += 1
             if count >= max_count:
@@ -296,7 +303,7 @@ def evaluate_network(parameters):
         #         for countttt in range(2):
         #             weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
 
-        pred = m.evaluate(test_img, test_masks, verbose = 0)
+        pred = m.evaluate(test_img, test_masks, verbose = 2)
         score = pred[1]
 
         mean_benchmark.append(score)
@@ -317,7 +324,7 @@ def evaluate_network(parameters):
 
     #print('One result appended')
     #exit_print(result_dict)
-    return -m1
+    return mean_benchmark
 from hyperopt import tpe
 from hyperopt import STATUS_OK
 from hyperopt import Trials
@@ -326,22 +333,31 @@ from hyperopt import fmin
 N_FOLDS = 10
 MAX_EVALS = 100
 def main():
-    space = {
-        'net_drop': hp.uniform('net_drop', 0.3, 0.5),
-        'net_filters': hp.choice('net_filters', [32, 64]),
-        'net_lr': hp.loguniform('net_lr', -math.log(10)*4.9, -math.log(10)*3.2),
-        'prop_elastic': hp.uniform('prop_elastic', 0, 0.2),
-        'b_size': hp.quniform('b_size', 1, 6, 1),
-        'pre_processing': hp.choice('pre_processing', [{'type': 'Standardize', 'whitening': 0},
-                                                        {'type': 'Normalize', 'whitening': 0},
-                                                        {'type': 'ZCA',
-                                                        'whitening': hp.loguniform('whitening', -math.log(10)*4, -math.log(10))}])
-    }
-    tpe_algorithm = tpe.suggest
-
-    bayes_trials = Trials()
-
-    best = fmin(fn = evaluate_network, space = space, algo = tpe.suggest, max_evals = MAX_EVALS, trials = bayes_trials)
+    parameters = {'net_drop': 0.45,
+                  'net_filters': 64,
+                  'net_lr': 5e-5,
+                  'prop_elastic': 0.05,
+                  'b_size': 5,
+                  'pre_processing': {'type': 'Standardize',
+                                     'whitening': 0}}
+    print(evaluate_network(parameters))
+    exit_print(result_dict, gpu, network, channels)
+    # space = {
+    #     'net_drop': hp.uniform('net_drop', 0.3, 0.5),
+    #     'net_filters': hp.choice('net_filters', [32, 64]),
+    #     'net_lr': hp.loguniform('net_lr', -math.log(10)*4.9, -math.log(10)*3.2),
+    #     'prop_elastic': hp.uniform('prop_elastic', 0, 0.2),
+    #     'b_size': hp.quniform('b_size', 1, 2, 1),
+    #     'pre_processing': hp.choice('pre_processing', [{'type': 'Standardize', 'whitening': 0},
+    #                                                     {'type': 'Normalize', 'whitening': 0},
+    #                                                     {'type': 'ZCA',
+    #                                                     'whitening': hp.loguniform('whitening', -math.log(10)*4, -math.log(10))}])
+    # }
+    # tpe_algorithm = tpe.suggest
+    #
+    # bayes_trials = Trials()
+    #
+    # best = fmin(fn = evaluate_network, space = space, algo = tpe.suggest, max_evals = MAX_EVALS, trials = bayes_trials)
 
 
 if __name__ == '__main__':
@@ -350,6 +366,6 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('Interrupted')
         exit_print(result_dict, gpu, network, channels)
-    except:
-        print('Error')
-        exit_print(result_dict, gpu, network, channels)
+    # except:
+    #     print('Error')
+    #     exit_print(result_dict, gpu, network, channels)
