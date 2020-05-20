@@ -182,9 +182,10 @@ for i in range(k_fold):
     v_mask.append(val_masks)
 
 result_dict = []
+metric_dict = {'iou_coef': [],
+               'val_iou_coef': []}
 
 v_img = np.array(v_img)
-
 iteration_count = 0
 
 def evaluate_network(parameters):
@@ -244,7 +245,7 @@ def evaluate_network(parameters):
         # earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
         # earlystopping2 = EarlyStopping(monitor = 'val_accuracy', baseline = 0.6, patience = NO_OF_EPOCHS // 2,  mode = 'auto')
         patience = NO_OF_EPOCHS // 2
-        callbacks_list = [EarlyStoppingBaseline(patience), EarlyStoppingDelta(patience)]
+        callbacks_list = [EarlyStoppingBaseline(patience), EarlyStoppingDelta(patience), PredictionCallback(test_img, test_masks, callback_path)]
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
@@ -263,7 +264,6 @@ def evaluate_network(parameters):
                 x = x / max_intensity
             elif preproc['type'] == 'ZCA':
                 x = zca_whitening(x, preproc['whitening'])
-
             if prop_elastic > 0:
                 for j in range(np.shape(x)[0]):
                     if random.random() < prop_elastic:
@@ -287,6 +287,8 @@ def evaluate_network(parameters):
             # print("hi")
             results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
 
+            metric_dict['iou_coef'].append(results.history['iou_coef'])
+            metric_dict['val_iou_coef'].append(results.history['val_iou_coef'])
             count += 1
             if count >= max_count:
                 break
@@ -303,12 +305,12 @@ def evaluate_network(parameters):
         #         for countttt in range(2):
         #             weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
 
-        pred = m.evaluate(test_img, test_masks, verbose = 2)
+        pred = m.evaluate(test_img, test_masks, batch_size = 6, verbose = 2)
         score = pred[1]
 
         mean_benchmark.append(score)
     m1 = np.mean(mean_benchmark)
-
+    print(metric_dict)
     iteration_count += 1
 
     result_dict.append({'Iteration': iteration_count,
