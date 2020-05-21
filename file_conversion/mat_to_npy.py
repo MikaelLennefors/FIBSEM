@@ -44,7 +44,10 @@ if __name__ == '__main__':
 	extracted_data = extract_mat_data(file)
 	for set, files in extracted_data.items():
 		for f in files:
-			shutil.move('../data/all_data_384/{}'.format(f), '../data/magnus_data/{}/'.format(set))
+			try:
+				shutil.move('../data/all_data_384/{}'.format(f), '../data/magnus_data/{}/'.format(set))
+			except:
+				print(f + 'does not exist')
 	sys.exit()
 	# for i in range(np.shape(extracted_data)[0]):
 	# 	imageio.imwrite(save_path + 'mask' + str(ratio)+ '_' + str(i).zfill(2) + '.png', extracted_data[i].T)

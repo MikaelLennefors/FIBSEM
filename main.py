@@ -7,12 +7,18 @@ import sys
 import tabulate
 import pandas as pd
 import time
-
+import cv2
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 
 from itertools import chain
 from GPyOpt.methods import BayesianOptimization
+
+from hyperopt import tpe
+from hyperopt import STATUS_OK
+from hyperopt import Trials
+from hyperopt import hp
+from hyperopt import fmin
 
 from tensorflow.keras.callbacks import *
 from tensorflow.keras.optimizers import Adam
@@ -70,11 +76,12 @@ else:
 if int(os.environ["CUDA_VISIBLE_DEVICES"]) == 0:
    gpu = 'Xp'
 
-data_path = './data/train_val_data_border_clean/'
-test_path = './data/test_data_border_clean/'
+train_path = './data/magnus_data/train/'
+val_path = './data/magnus_data/val/'
+test_path = './data/magnus_data/test/'
 
-log_path = './results/{}/log.out'.format(gpu) #TODO Old from tensorboard
-weights_path = './results/{}/weights'.format(gpu)
+log_path = './results/{}/log.out/'.format(gpu) #TODO Old from tensorboard
+weights_path = './results/{}/weights/'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
@@ -84,7 +91,7 @@ max_hours = 48
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 12
+NO_OF_EPOCHS = 16
 max_count = 10
 k_fold = 1
 
@@ -119,10 +126,12 @@ end_time = time.time() + max_hours*60*60
 current_time = time.strftime("%H:%M:%S", time.localtime())
 print('Current time:', current_time, '\nGPU:', gpu, '\nNetwork:', network, '\nChannels:', channels,'\nNumber of epochs:', NO_OF_EPOCHS, '\nMax count:', max_count, '\nk fold:', k_fold, '\nGrid split:', grid_split)
 
-images, masks = extract_data(data_path, channels, standardize = False)
+train_images, train_masks = extract_data(train_path, channels, standardize = False)
+val_images, val_masks = extract_data(val_path, channels, standardize = False)
 test_images, test_masks = extract_data(test_path, channels, standardize = False)
 
-images_standardized, masks_standardized = extract_data(data_path, channels, standardize = True)
+train_images_standardized, train_masks_standardized = extract_data(train_path, channels, standardize = True)
+val_images_standardized, val_masks_standardized = extract_data(val_path, channels, standardize = True)
 test_images_standardized, test_masks_standardized = extract_data(test_path, channels, standardize = True)
 
 if grid_split > 1:
@@ -138,8 +147,8 @@ v_img_standardized = []
 v_mask = []
 
 for i in range(k_fold):
-    train_images, train_masks, val_images, val_masks = gen_data_split(images, masks, random_seed = i)
-    train_images_standardized, train_masks, val_images_standardized, val_masks = gen_data_split(images_standardized, masks, random_seed = i)
+    # train_images, train_masks, val_images, val_masks = gen_data_split(images, masks, random_seed = i)
+    # train_images_standardized, train_masks, val_images_standardized, val_masks = gen_data_split(images_standardized, masks, random_seed = i)
     if grid_split > 1:
         x = np.mean(train_masks, axis = (1,2,-1))
         min_pics = np.shape(x)[0]
@@ -229,7 +238,7 @@ def evaluate_network(parameters):
         train = data[0]
         validation_img = data[1]
         validation_mask = data[2]
-        input_size = np.shape(images)[1:]
+        input_size = np.shape(train_images)[1:]
         if network == 'unet':
             m = unet(input_size = input_size, multiple = net_filters, activation = net_activ_fun, dout = net_drop)
         elif network == 'dunet':
@@ -245,7 +254,7 @@ def evaluate_network(parameters):
         # earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
         # earlystopping2 = EarlyStopping(monitor = 'val_accuracy', baseline = 0.6, patience = NO_OF_EPOCHS // 2,  mode = 'auto')
         patience = NO_OF_EPOCHS // 2
-        callbacks_list = [EarlyStoppingBaseline(patience), EarlyStoppingDelta(patience), PredictionCallback(test_img, test_masks, callback_path)]
+        callbacks_list = [EarlyStoppingBaseline(patience), EarlyStoppingDelta(patience), PredictionCallback(test_img, test_masks, callback_path, network)]
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
@@ -286,7 +295,8 @@ def evaluate_network(parameters):
                 raise KeyboardInterrupt
             # print("hi")
             results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
-
+            # print(results.history)
+            # sys.exit()
             metric_dict['iou_coef'].append(results.history['iou_coef'])
             metric_dict['val_iou_coef'].append(results.history['val_iou_coef'])
             count += 1
@@ -298,17 +308,22 @@ def evaluate_network(parameters):
         # diff_mask = np.abs(testy_mask - np.squeeze(test_mask, axis = -1))
 
 
-        # weights = []
-        # for layer in m.layers:
-        #     curr_weights = layer.get_weights()
-        #     if curr_weights:
-        #         for countttt in range(2):
-        #             weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
-
+        weights = []
+        for layer in m.layers:
+            curr_weights = layer.get_weights()
+            if curr_weights:
+                for countttt in range(2):
+                    weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
+        np.savetxt(weights_path + network + '_weights.txt', weights)
         pred = m.evaluate(test_img, test_masks, batch_size = 6, verbose = 2)
+        print(pred)
         score = pred[1]
 
         mean_benchmark.append(score)
+    predic_mask = m.predict(np.expand_dims(test_img[30], axis = 0))
+    testy_mask = 255. * np.around(predic_mask).reshape(np.shape(predic_mask)[1],np.shape(predic_mask)[1]).astype(np.uint8)
+    print("True proportion:", np.mean(test_masks[30]), "Predicted proportion:", np.mean(testy_mask) / 255.)
+    cv2.imwrite(callback_path + network + '_pred_mask' + '.png', testy_mask)
     m1 = np.mean(mean_benchmark)
     print(metric_dict)
     iteration_count += 1
@@ -327,20 +342,16 @@ def evaluate_network(parameters):
     #print('One result appended')
     #exit_print(result_dict)
     return mean_benchmark
-from hyperopt import tpe
-from hyperopt import STATUS_OK
-from hyperopt import Trials
-from hyperopt import hp
-from hyperopt import fmin
+
 N_FOLDS = 10
 MAX_EVALS = 100
 def main():
     parameters = {'net_drop': 0.45,
                   'net_filters': 64,
-                  'net_lr': 5e-5,
-                  'prop_elastic': 0.05,
-                  'b_size': 5,
-                  'pre_processing': {'type': 'Standardize',
+                  'net_lr': 3e-5,
+                  'prop_elastic': 0.16,
+                  'b_size': 6,
+                  'pre_processing': {'type': 'Normalize',
                                      'whitening': 0}}
     print(evaluate_network(parameters))
     exit_print(result_dict, gpu, network, channels)
