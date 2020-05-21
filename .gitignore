@@ -2,5 +2,6 @@ __pycache__/
 callback_masks
 *.zip
 *.hdf5
+*.txt
 *.tif
 *.html
