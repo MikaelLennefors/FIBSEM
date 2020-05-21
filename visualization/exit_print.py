@@ -20,7 +20,7 @@ def exit_print(list_of_dicts, gpu, network, channels):
 
     test = pd.DataFrame(data = rows, columns = header)
     test.index += 1
-    test.to_csv('./results/{}/{}_{}_channels.csv'.format(gpu, network, channels), index_label = 'Index')
+    test.to_csv('./results/{}/metrics/{}_{}_channels.csv'.format(gpu, network, channels), index_label = 'Index')
 
     print('\n\n')
     print(tabulate.tabulate(test, headers='keys', tablefmt="fancy_grid", stralign="right", floatfmt=("d", "d", ".3f", "d", ".3e", "s", ".3e", "d", ".3f", ".3f")))
