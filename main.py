@@ -254,7 +254,7 @@ def evaluate_network(parameters):
         # earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
         # earlystopping2 = EarlyStopping(monitor = 'val_accuracy', baseline = 0.6, patience = NO_OF_EPOCHS // 2,  mode = 'auto')
         patience = NO_OF_EPOCHS // 2
-        callbacks_list = [EarlyStoppingBaseline(patience), EarlyStoppingDelta(patience), PredictionCallback(test_img, test_masks, callback_path, network)]
+        callbacks_list = [EarlyStoppingBaseline(patience), EarlyStoppingDelta(patience), PredictionCallback(test_img, test_masks, callback_path, network, channels)]
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
@@ -297,8 +297,8 @@ def evaluate_network(parameters):
             results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
             # print(results.history)
             # sys.exit()
-            metric_dict['iou_coef'].append(results.history['iou_coef'])
-            metric_dict['val_iou_coef'].append(results.history['val_iou_coef'])
+            metric_dict['iou_coef'].extend(results.history['iou_coef'])
+            metric_dict['val_iou_coef'].extend(results.history['val_iou_coef'])
             count += 1
             if count >= max_count:
                 break
@@ -312,9 +312,9 @@ def evaluate_network(parameters):
         for layer in m.layers:
             curr_weights = layer.get_weights()
             if curr_weights:
-                for countttt in range(2):
-                    weights.extend(np.ravel(list(chain.from_iterable(curr_weights))[countttt]))
-        np.savetxt(weights_path + network + '_weights.txt', weights)
+                for countttt in list(chain.from_iterable(curr_weights)):
+                    weights.extend(np.ravel(countttt))
+        np.savetxt(weights_path + network + '_' + str(channels) + '_weights.txt2', weights)
         pred = m.evaluate(test_img, test_masks, batch_size = 6, verbose = 2)
         print(pred)
         score = pred[1]
@@ -323,8 +323,12 @@ def evaluate_network(parameters):
     predic_mask = m.predict(np.expand_dims(test_img[30], axis = 0))
     testy_mask = 255. * np.around(predic_mask).reshape(np.shape(predic_mask)[1],np.shape(predic_mask)[1]).astype(np.uint8)
     print("True proportion:", np.mean(test_masks[30]), "Predicted proportion:", np.mean(testy_mask) / 255.)
-    cv2.imwrite(callback_path + network + '_pred_mask' + '.png', testy_mask)
+    cv2.imwrite(callback_path + network + '_' + str(channels) + '_pred_mask' + '.png', testy_mask)
     m1 = np.mean(mean_benchmark)
+    metric_dict['iou_coef'] = np.array(metric_dict['iou_coef'])
+    metric_dict['val_iou_coef'] = np.array(metric_dict['val_iou_coef'])
+    np.savetxt(callback_path + network + '_' + str(channels) + '_iou_hist.txt', metric_dict['iou_coef'])
+    np.savetxt(callback_path + network + '_' + str(channels) + '_val_iou_hist.txt', metric_dict['val_iou_coef'])
     print(metric_dict)
     iteration_count += 1
 
@@ -346,14 +350,50 @@ def evaluate_network(parameters):
 N_FOLDS = 10
 MAX_EVALS = 100
 def main():
-    parameters = {'net_drop': 0.45,
+    parameters = {'unet': {'net_drop': 0.4,
                   'net_filters': 64,
-                  'net_lr': 3e-5,
-                  'prop_elastic': 0.16,
+                  'net_lr': 6.4e-5,
+                  'prop_elastic': 0.04,
                   'b_size': 6,
                   'pre_processing': {'type': 'Normalize',
-                                     'whitening': 0}}
-    print(evaluate_network(parameters))
+                                     'whitening': 0}},
+                  'dunet3': {'net_drop': 0.45,
+                                'net_filters': 64,
+                                'net_lr': 5e-5,
+                                'prop_elastic': 0.05,
+                                'b_size': 5,
+                                'pre_processing': {'type': 'Standardize',
+                                                   'whitening': 0}},
+                  'multiresunet': {'net_drop': 0.45,
+                                'net_filters': 64,
+                                'net_lr': 3e-5,
+                                'prop_elastic': 0.16,
+                                'b_size': 6,
+                                'pre_processing': {'type': 'Normalize',
+                                                   'whitening': 0}},
+                  'multiresunet3': {'net_drop': 0.35,
+                                'net_filters': 64,
+                                'net_lr': 2.5e-4,
+                                'prop_elastic': 0.125,
+                                'b_size': 4,
+                                'pre_processing': {'type': 'ZCA',
+                                                   'whitening': 1e-1}},
+                  'multiresunet5': {'net_drop': 0.35,
+                                'net_filters': 64,
+                                'net_lr': 1e-4,
+                                'prop_elastic': 0.125,
+                                'b_size': 1,
+                                'pre_processing': {'type': 'Normalize',
+                                                   'whitening': 0}}}
+
+
+    if channels > 1:
+        curr_pars = parameters[network + str(channels)]
+    else:
+        curr_pars = parameters[network]
+
+
+    print(evaluate_network(curr_pars))
     exit_print(result_dict, gpu, network, channels)
     # space = {
     #     'net_drop': hp.uniform('net_drop', 0.3, 0.5),
