@@ -12,6 +12,8 @@ Non-local UNet: https://arxiv.org/pdf/1812.04103.pdf
 UNet++: https://arxiv.org/pdf/1912.05074.pdf
 
 D-Unet: https://arxiv.org/pdf/1908.05104.pdf
+
+review: https://reader.elsevier.com/reader/sd/pii/S1361841517301135?token=E86E7276B4466D63BA79BB5826D523D5BED470BE6AE8BFE33FE6FEF315A84C4D27B88604085505CA8DA32D3FFF4E46B5
 ## Preprocessing
 ZCA:
 http://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf
