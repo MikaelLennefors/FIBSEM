@@ -13,7 +13,7 @@ if __name__ == '__main__':
     # print(weights.iloc[0:10])
     print(weights.shape)
     # sns.set(rc={'figure.facecolor':'gray'})
-    # sns.set_style("darkgrid", {"axes.facecolor": ".9"})
+    sns.set_style("darkgrid", {"axes.facecolor": ".9"})
     sns.set_context("notebook",font_scale=1.5)
     fig,axes=plt.subplots(1,1,figsize=(16,9))
     # fig.suptitle('Distribution of weights for MultiResU-net 1 channel', fontsize=18, fontweight="bold")
