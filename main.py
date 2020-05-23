@@ -260,7 +260,7 @@ def evaluate_network(parameters):
         # earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
         # earlystopping2 = EarlyStopping(monitor = 'val_accuracy', baseline = 0.6, patience = NO_OF_EPOCHS // 2,  mode = 'auto')
         patience = NO_OF_EPOCHS // 2
-        callbacks_list = [PredictionCallback(test_img, test_masks, callback_path, network, channels)]
+        callbacks_list = [PredictionCallback(test_img)]
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
@@ -304,7 +304,7 @@ def evaluate_network(parameters):
 
             metric_dict['iou_coef'][str(k_fold_count)].extend(results.history['iou_coef'])
             metric_dict['val_iou_coef'][str(k_fold_count)].extend(results.history['val_iou_coef'])
-            metric_dict['predicted_prop'][str(k_fold_count)].extend(callbacks_list[-1].predicted_prop)
+            print(metric_dict)
             count += 1
             if count >= max_count:
                 break
@@ -321,6 +321,7 @@ def evaluate_network(parameters):
         #         for countttt in list(chain.from_iterable(curr_weights)):
         #             weights.extend(np.ravel(countttt))
         # np.savetxt(weights_path + network + '_' + str(channels) + '_weights.txt2', weights)
+        metric_dict['predicted_prop'][str(k_fold_count)].extend(callbacks_list[-1].predicted_prop)
         pred = m.evaluate(test_img, test_masks, batch_size = 6, verbose = 2)
         # print(pred)
         score = pred[1]
@@ -340,7 +341,7 @@ def evaluate_network(parameters):
     m1 = np.mean(mean_benchmark)
     # np.savetxt(callback_path + network + '_' + str(channels) + '_iou_hist.txt', metric_dict['iou_coef'])
     # np.savetxt(callback_path + network + '_' + str(channels) + '_val_iou_hist.txt', metric_dict['val_iou_coef'])
-    print(metric_dict)
+    # print(metric_dict)
     iteration_count += 1
 
     result_dict.append({'Iteration': iteration_count,
