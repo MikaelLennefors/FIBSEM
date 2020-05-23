@@ -15,8 +15,4 @@ class PredictionCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
         predic_masks = self.model.predict(np.expand_dims(self.test_img, axis = -1))
         testy_masks = np.mean(np.around(predic_masks))
-        print('')
-        print("True proportion:", np.mean(self.test_mask), "Predicted proportion:", testy_masks)
         self.predicted_prop = np.append(self.predicted_prop, testy_masks)
-        print('')
-        np.savetxt(self.callback_path + self.network + '_' + str(self.channels) + '_test_proportions.txt', self.predicted_prop)

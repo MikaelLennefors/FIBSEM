@@ -1,2 +1,2 @@
 Index,Iteration,Mean IoU,Filters,Learning rate,Pre processing,Whitening,Batch size,Dropout,Elastic proportion
-1,1,0.6804682016372681,64,0.00025,ZCA,0.1,4,0.35,0.125
+1,1,0.685402492682139,64,0.00025,ZCA,0.1,4,0.35,0.125

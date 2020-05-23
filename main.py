@@ -91,9 +91,9 @@ max_hours = 48
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 16
-max_count = 10
-k_fold = 1
+NO_OF_EPOCHS = 24
+max_count = 8
+k_fold = 3
 
 elast_deform = True
 elast_alpha = 2
@@ -191,13 +191,15 @@ for i in range(k_fold):
     v_mask.append(val_masks)
 
 result_dict = []
-metric_dict = {'iou_coef': [],
-               'val_iou_coef': []}
+metric_dict = {'iou_coef': {},
+               'val_iou_coef': {},
+               'predicted_prop': {}}
 
 v_img = np.array(v_img)
 iteration_count = 0
 
 def evaluate_network(parameters):
+    k_fold_count = 0
     global iteration_count
     global test_images
     global result_dict
@@ -235,6 +237,10 @@ def evaluate_network(parameters):
 
 
     for data in zip(train_gen, val_img, v_mask):
+        k_fold_count += 1
+        metric_dict['iou_coef'][str(k_fold_count)] = []
+        metric_dict['val_iou_coef'][str(k_fold_count)] = []
+        metric_dict['predicted_prop'][str(k_fold_count)] = []
         train = data[0]
         validation_img = data[1]
         validation_mask = data[2]
@@ -254,7 +260,7 @@ def evaluate_network(parameters):
         # earlystopping1 = EarlyStopping(monitor = 'val_iou_coef', min_delta = 0.01, patience = NO_OF_EPOCHS // 2, mode = 'max')
         # earlystopping2 = EarlyStopping(monitor = 'val_accuracy', baseline = 0.6, patience = NO_OF_EPOCHS // 2,  mode = 'auto')
         patience = NO_OF_EPOCHS // 2
-        callbacks_list = [EarlyStoppingBaseline(patience), EarlyStoppingDelta(patience), PredictionCallback(test_img, test_masks, callback_path, network, channels)]
+        callbacks_list = [PredictionCallback(test_img, test_masks, callback_path, network, channels)]
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
@@ -291,14 +297,14 @@ def evaluate_network(parameters):
             if max_val > 1:
                 raise
 
-            if time.time() > end_time:
-                raise KeyboardInterrupt
+            # if time.time() > end_time:
+            #     raise KeyboardInterrupt
             # print("hi")
             results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
-            # print(results.history)
-            # sys.exit()
-            metric_dict['iou_coef'].extend(results.history['iou_coef'])
-            metric_dict['val_iou_coef'].extend(results.history['val_iou_coef'])
+
+            metric_dict['iou_coef'][str(k_fold_count)].extend(results.history['iou_coef'])
+            metric_dict['val_iou_coef'][str(k_fold_count)].extend(results.history['val_iou_coef'])
+            metric_dict['predicted_prop'][str(k_fold_count)].extend(callbacks_list[-1].predicted_prop)
             count += 1
             if count >= max_count:
                 break
@@ -308,27 +314,32 @@ def evaluate_network(parameters):
         # diff_mask = np.abs(testy_mask - np.squeeze(test_mask, axis = -1))
 
 
-        weights = []
-        for layer in m.layers:
-            curr_weights = layer.get_weights()
-            if curr_weights:
-                for countttt in list(chain.from_iterable(curr_weights)):
-                    weights.extend(np.ravel(countttt))
-        np.savetxt(weights_path + network + '_' + str(channels) + '_weights.txt2', weights)
+        # weights = []
+        # for layer in m.layers:
+        #     curr_weights = layer.get_weights()
+        #     if curr_weights:
+        #         for countttt in list(chain.from_iterable(curr_weights)):
+        #             weights.extend(np.ravel(countttt))
+        # np.savetxt(weights_path + network + '_' + str(channels) + '_weights.txt2', weights)
         pred = m.evaluate(test_img, test_masks, batch_size = 6, verbose = 2)
-        print(pred)
+        # print(pred)
         score = pred[1]
 
         mean_benchmark.append(score)
-    predic_mask = m.predict(np.expand_dims(test_img[30], axis = 0))
-    testy_mask = 255. * np.around(predic_mask).reshape(np.shape(predic_mask)[1],np.shape(predic_mask)[1]).astype(np.uint8)
-    print("True proportion:", np.mean(test_masks[30]), "Predicted proportion:", np.mean(testy_mask) / 255.)
-    cv2.imwrite(callback_path + network + '_' + str(channels) + '_pred_mask' + '.png', testy_mask)
+    df_test1 = pd.DataFrame(metric_dict['iou_coef'])
+    df_test2 = pd.DataFrame(metric_dict['val_iou_coef'])
+    df_test3 = pd.DataFrame(metric_dict['predicted_prop'])
+    df_test1.to_csv(callback_path + network + '_' + str(channels) + '_iou_hist.txt', index = False)
+    df_test2.to_csv(callback_path + network + '_' + str(channels) + '_val_iou_hist.txt', index = False)
+    df_test3.to_csv(callback_path + network + '_' + str(channels) + '_test_proportions.txt', index = False)
+    # predic_mask = m.predict(np.expand_dims(test_img[30], axis = 0))
+    # testy_mask = 255. * np.around(predic_mask).reshape(np.shape(predic_mask)[1],np.shape(predic_mask)[1]).astype(np.uint8)
+    # print("True proportion:", np.mean(test_masks[30]), "Predicted proportion:", np.mean(testy_mask) / 255.)
+
+    # cv2.imwrite(callback_path + network + '_' + str(channels) + '_pred_mask' + '.png', testy_mask)
     m1 = np.mean(mean_benchmark)
-    metric_dict['iou_coef'] = np.array(metric_dict['iou_coef'])
-    metric_dict['val_iou_coef'] = np.array(metric_dict['val_iou_coef'])
-    np.savetxt(callback_path + network + '_' + str(channels) + '_iou_hist.txt', metric_dict['iou_coef'])
-    np.savetxt(callback_path + network + '_' + str(channels) + '_val_iou_hist.txt', metric_dict['val_iou_coef'])
+    # np.savetxt(callback_path + network + '_' + str(channels) + '_iou_hist.txt', metric_dict['iou_coef'])
+    # np.savetxt(callback_path + network + '_' + str(channels) + '_val_iou_hist.txt', metric_dict['val_iou_coef'])
     print(metric_dict)
     iteration_count += 1
 
@@ -348,7 +359,7 @@ def evaluate_network(parameters):
     return mean_benchmark
 
 N_FOLDS = 10
-MAX_EVALS = 100
+MAX_EVALS = 500
 def main():
     parameters = {'unet': {'net_drop': 0.4,
                   'net_filters': 64,
@@ -426,9 +437,9 @@ def main():
     # space = {
     #     'net_drop': hp.uniform('net_drop', 0.3, 0.5),
     #     'net_filters': hp.choice('net_filters', [32, 64]),
-    #     'net_lr': hp.loguniform('net_lr', -math.log(10)*4.9, -math.log(10)*3.2),
+    #     'net_lr': hp.loguniform('net_lr', -math.log(10)*4.6, -math.log(10)*3.2),
     #     'prop_elastic': hp.uniform('prop_elastic', 0, 0.2),
-    #     'b_size': hp.quniform('b_size', 1, 2, 1),
+    #     'b_size': hp.quniform('b_size', 1, 6, 1),
     #     'pre_processing': hp.choice('pre_processing', [{'type': 'Standardize', 'whitening': 0},
     #                                                     {'type': 'Normalize', 'whitening': 0},
     #                                                     {'type': 'ZCA',
