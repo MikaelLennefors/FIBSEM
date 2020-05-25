@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
     path ='Xp/callback_masks'
 
-    train = pd.read_csv(path + '/unet_1_iou_hist.txt', sep=",")
-    val = pd.read_csv(path + '/unet_1_val_iou_hist.txt', sep=",")
-    test = pd.read_csv(path + '/unet_1_test_proportions.txt', sep=",")
+    # train = pd.read_csv(path + '/unet_1_iou_hist.txt', sep=",")
+    # val = pd.read_csv(path + '/unet_1_val_iou_hist.txt', sep=",")
+    # test = pd.read_csv(path + '/unet_1_test_proportions.txt', sep=",")
 
     # train = pd.read_csv(path + '/multiresunet_1_iou_hist.txt', sep=",")
     # val = pd.read_csv(path + '/multiresunet_1_val_iou_hist.txt', sep=",")
@@ -22,6 +22,10 @@ if __name__ == '__main__':
     # train = pd.read_csv(path + '/nestnet_1_iou_hist.txt', sep="\n", header=None)
     # val = pd.read_csv(path + '/nestnet_1_val_iou_hist.txt', sep="\n", header=None)
     # test = pd.read_csv(path + '/nestnet_1_test_proportions.txt', sep="\n", header=None)
+
+    train = pd.read_csv(path + '/nestnet_3_iou_hist.txt', sep=",")
+    val = pd.read_csv(path + '/nestnet_3_val_iou_hist.txt', sep=",")
+    test = pd.read_csv(path + '/nestnet_3_test_proportions.txt', sep=",")
 
     # path ='V/callback_masks'
 
@@ -37,22 +41,18 @@ if __name__ == '__main__':
     # val = pd.read_csv(path + '/dunet_5_val_iou_hist.txt', sep="\n", header=None)
     # test = pd.read_csv(path + '/dunet_5_test_proportions.txt', sep="\n", header=None)
 
-    # train = pd.read_csv(path + '/nestnet_3_iou_hist.txt', sep="\n", header=None)
-    # val = pd.read_csv(path + '/nestnet_3_val_iou_hist.txt', sep="\n", header=None)
-    # test = pd.read_csv(path + '/nestnet_3_test_proportions.txt', sep="\n", header=None)
+    # train = pd.read_csv(path + '/nestnet_5_iou_hist.txt', sep=",")
+    # val = pd.read_csv(path + '/nestnet_5_val_iou_hist.txt', sep=",")
+    # test = pd.read_csv(path + '/nestnet_5_test_proportions.txt', sep=",")
 
-    # train = pd.read_csv(path + '/nestnet_5_iou_hist.txt', sep="\n", header=None)
-    # val = pd.read_csv(path + '/nestnet_5_val_iou_hist.txt', sep="\n", header=None)
-    # test = pd.read_csv(path + '/nestnet_5_test_proportions.txt', sep="\n", header=None)
-
-    network = 'U-Net 1 channel'
+    # network = 'U-Net 1 channel'
     # network = 'MultiResU-Net 1 channel'
     # network = 'MultiResU-Net 3 channel'
     # network = 'MultiResU-Net 5 channel'
     # network = 'DU-Net 3 channel'
     # network = 'DU-Net 5 channel'
     # network = 'U-Net++ 1 channel'
-    # network = 'U-Net++ 3 channel'
+    network = 'U-Net++ 3 channel'
     # network = 'U-Net++ 5 channel'
     epochs = range(0,train.shape[0])
     epochs_test = range(0,test.shape[0])
@@ -64,7 +64,8 @@ if __name__ == '__main__':
     train = pd.concat([IoU_train, epoch],axis = 1)
     train.columns = ['IoU_train', 'epoch']
 
-    val= pd.concat([val['2'], val['3']],axis = 1)
+
+    # val= pd.concat([val['2'], val['3']],axis = 1)
     mean_val = np.mean(val,axis =1)
     max_val = np.max(mean_val)
     val['epoch'] = epochs
@@ -74,7 +75,7 @@ if __name__ == '__main__':
     epoch = pd.concat([val['epoch'],val['epoch'], val['epoch']])
     val = pd.concat([IoU_val, epoch],axis = 1)
     val.columns = ['IoU_val', 'epoch']
-
+    print(test)
     # test = pd.concat([test['2'], test['3']],axis = 1)
     mean_prop = np.mean(test.iloc[-1])
     std_prop = np.std(test.iloc[-1])
