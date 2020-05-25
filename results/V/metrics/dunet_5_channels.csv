@@ -1,2 +1,2 @@
 Index,Iteration,Mean IoU,Filters,Learning rate,Pre processing,Whitening,Batch size,Dropout,Elastic proportion
-1,1,0.7026647329330444,32,5e-05,Standardize,0,4,0.45,0.05
+1,1,0.6917550762494405,32,5e-05,Standardize,0,4,0.45,0.05

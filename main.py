@@ -91,8 +91,8 @@ max_hours = 48
 grid_split = 0
 grid_split = 2**grid_split
 
-NO_OF_EPOCHS = 24
-max_count = 8
+NO_OF_EPOCHS = 48
+max_count = 16
 k_fold = 3
 
 elast_deform = True
