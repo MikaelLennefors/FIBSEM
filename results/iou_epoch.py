@@ -19,9 +19,9 @@ if __name__ == '__main__':
     # val = pd.read_csv(path + '/multiresunet_5_val_iou_hist.txt', sep="\n", header=None)
     # test = pd.read_csv(path + '/multiresunet_5_test_proportions.txt', sep="\n", header=None)
 
-    # train = pd.read_csv(path + '/nestnet_1_iou_hist.txt', sep="\n", header=None)
-    # val = pd.read_csv(path + '/nestnet_1_val_iou_hist.txt', sep="\n", header=None)
-    # test = pd.read_csv(path + '/nestnet_1_test_proportions.txt', sep="\n", header=None)
+    # train = pd.read_csv(path + '/nestnet_1_iou_hist.txt', sep=",")
+    # val = pd.read_csv(path + '/nestnet_1_val_iou_hist.txt', sep=",")
+    # test = pd.read_csv(path + '/nestnet_1_test_proportions.txt', sep=",")
 
     train = pd.read_csv(path + '/nestnet_3_iou_hist.txt', sep=",")
     val = pd.read_csv(path + '/nestnet_3_val_iou_hist.txt', sep=",")
@@ -33,13 +33,17 @@ if __name__ == '__main__':
     # val = pd.read_csv(path + '/multiresunet_3_val_iou_hist.txt', sep=",")
     # test = pd.read_csv(path + '/multiresunet_3_test_proportions.txt', sep=",")
 
+    # train = pd.read_csv(path + '/multiresunet_5_iou_hist.txt', sep=",")
+    # val = pd.read_csv(path + '/multiresunet_5_val_iou_hist.txt', sep=",")
+    # test = pd.read_csv(path + '/multiresunet_5_test_proportions.txt', sep=",")
+
     # train = pd.read_csv(path + '/dunet_3_iou_hist.txt', sep=",")
     # val = pd.read_csv(path + '/dunet_3_val_iou_hist.txt', sep=",")
     # test = pd.read_csv(path + '/dunet_3_test_proportions.txt', sep=",")
 
-    # train = pd.read_csv(path + '/dunet_5_iou_hist.txt', sep="\n", header=None)
-    # val = pd.read_csv(path + '/dunet_5_val_iou_hist.txt', sep="\n", header=None)
-    # test = pd.read_csv(path + '/dunet_5_test_proportions.txt', sep="\n", header=None)
+    # train = pd.read_csv(path + '/dunet_5_iou_hist.txt', sep=",")
+    # val = pd.read_csv(path + '/dunet_5_val_iou_hist.txt', sep=",")
+    # test = pd.read_csv(path + '/dunet_5_test_proportions.txt', sep=",")
 
     # train = pd.read_csv(path + '/nestnet_5_iou_hist.txt', sep=",")
     # val = pd.read_csv(path + '/nestnet_5_val_iou_hist.txt', sep=",")
@@ -75,7 +79,7 @@ if __name__ == '__main__':
     epoch = pd.concat([val['epoch'],val['epoch'], val['epoch']])
     val = pd.concat([IoU_val, epoch],axis = 1)
     val.columns = ['IoU_val', 'epoch']
-    print(test)
+
     # test = pd.concat([test['2'], test['3']],axis = 1)
     mean_prop = np.mean(test.iloc[-1])
     std_prop = np.std(test.iloc[-1])
