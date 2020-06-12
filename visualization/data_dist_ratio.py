@@ -6,12 +6,23 @@ import matplotlib.pyplot as plt
 sys.path.insert(1, '../processing')
 from extract_data_ratio import extract_data_ratio
 
+#TODO: change data folders?
 data_path = '../data/train_val_data_border_clean/'
 test_path = '../data/test_data_border_clean/'
 
 sns.set(color_codes=True)
 
 def vis_data_dist_ratio(channels = 1):
+    '''
+    Visualization of intensity distributions between porosites. Plots histograms
+    ans KDE-estimates of the distributions, together with mean and std.
+
+    Input:
+        channels (int): This is the channel number. It will always be 1 due to
+                        only having manual label for one image.
+    Output:
+        plot
+    '''
     images22, _ = extract_data_ratio(data_path, channels, 22)
     test_img22, _ = extract_data_ratio(test_path, channels, 22)
     images22 =  np.hstack([images22.ravel(), test_img22.ravel()])

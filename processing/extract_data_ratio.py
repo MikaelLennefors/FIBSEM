@@ -3,6 +3,7 @@ import os
 import cv2
 
 def extract_data_ratio(path, channels, ratio):
+
     og_dir = os.listdir(path)
     og_dir.sort()
 

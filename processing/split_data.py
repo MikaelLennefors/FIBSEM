@@ -2,6 +2,19 @@ import math
 import numpy as np
 
 def gen_data_split(images, masks, random_seed):
+    '''
+    Splits image data into training (75%) and validation set (25%).
+
+    Input:
+        images (png): the image data set.
+        masks (png): the maske corresponding to the images.
+        random_seed (int): random seed for split.
+    Output:
+        train_images (png): the training images
+        train_mask (png): the training masks
+        val_images (png): the validation images
+        val_mask (png): the validation masks
+    '''
     n_images = np.shape(images)[0]
 
     image_indices = np.random.RandomState(seed=random_seed).permutation(n_images)

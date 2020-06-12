@@ -6,18 +6,27 @@ import pandas as pd
 import sys
 import shutil, os
 
+# TODO: Change data folders?
+
 save_path = '../data/magnus_bilder/'
 path_to_data = '/home/ubuntu/Downloads/'
 
 
 def extract_mat_data(file):
+	'''
+	Extracts data from mat-files and converts it to npy-filters.
+
+	Input:
+		mat-file.
+	Output:
+		npy-file.
+	'''
 	str1 = []
 	data = {'train': [],
 			'val':[],
 			'test': []}
 	f = scipy.io.loadmat(path_to_data + file)
-	# print(f)
-	# sys.exit()
+
 	for key, value in f.items():
 		if 'ind' in key:
 			value = value[0].astype(int)
@@ -49,6 +58,3 @@ if __name__ == '__main__':
 			except:
 				print(f + 'does not exist')
 	sys.exit()
-	# for i in range(np.shape(extracted_data)[0]):
-	# 	imageio.imwrite(save_path + 'mask' + str(ratio)+ '_' + str(i).zfill(2) + '.png', extracted_data[i].T)
-	#np.save(save_path + 'mask' + ratio + '.npy', extracted_data)

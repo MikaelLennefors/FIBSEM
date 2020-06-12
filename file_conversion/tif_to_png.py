@@ -1,12 +1,21 @@
 import numpy as np
 import cv2
 from libtiff import TIFF
+# TODO: Change data folder?
 path = '../data/'
-
 save_path = '../data/all_data_384/'
 
 
 def read_tiff(path):
+    '''
+    Converts a tiff-file to png. The function calls the user to input the
+    porosity of the file to be read.
+
+    Input:
+        path (str): path to tiff-file as string.
+    Output:
+        save_name (png): png image from tiff-file.
+    '''
     img1 = TIFF.open(path)
     images = []
     for image in img1.iter_images():
@@ -20,7 +29,6 @@ if __name__ == '__main__':
     filename = 'regions_HPC{}.tif'.format(ratio)
     file = path + filename
     img = read_tiff(file)
-    print(np.shape(img))
     save_name = 'image{}_'.format(ratio)
 
     for image in range(np.shape(img)[0]):

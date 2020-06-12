@@ -3,6 +3,17 @@ import jax.numpy as np
 from jax import jit
 
 def zca_whitening(img, epsilon = 1e-3):
+    '''
+    Performs ZCA on input image. Function need jax-library to be installed. Jax
+    is for the moment (april 2020) only avilable on Linux.
+
+    Input:
+        img (png): image to be processed
+        epsilon (float): whitening-coefficient
+
+    Output:
+        jax array of processed image
+    '''
     @jit
     def jax_whitening(img, epsilon):
         x = np.shape(img)[1]

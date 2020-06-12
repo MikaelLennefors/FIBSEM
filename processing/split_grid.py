@@ -2,6 +2,20 @@ import numpy as np
 import random
 
 def split_grid(images, masks, grid_split, test_set = False, rand_seed = 1):
+    '''
+    Splits images of size 256x256 in (256/2^grid_split) x (256/2^grid_split) patches. The
+    number of produces patches n_patches can be set by the user. The program
+    samples n_patches randomly in the image. Also, the user
+    can set if the the set to be splitted is the test set. If that is the case,
+    the whole test image is used instead of taking a random sample of the image.
+
+    Input:
+        images (png): images
+        masks (png): mask
+        grid_split (int): 256/2^grid_split will be witdh and hight of patch.
+        test_set (boolean): True if test set is to be split. Default False.
+        rand_seed (int): seed for random sampling.
+    '''
     img_shape = int(np.shape(masks)[1]/grid_split)
 
     img_split = []
