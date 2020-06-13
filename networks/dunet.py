@@ -18,6 +18,11 @@ import copy
 import os
 import losses
 
+# DIMENSION-FUSION U-NET
+# ======================
+# link to github of authours: https://github.com/SZUHvern/D-UNet/blob/master/model.py
+# link to article: https://arxiv.org/pdf/1908.05104.pdf
+
 def expand(x):
     x = keras.expand_dims(x, axis=-1)
     return x
@@ -31,6 +36,18 @@ def squeeze_2(x):
     return x
 
 def BN_block(filter_num, input, activation):
+    '''
+    Batch normilization block. The block consists of a conv-layers, activations
+    function and batch normilization in serial, two times. NOTE! batch normilization
+    was not used in the master thesis, and therefore is omitted. It's a reminant
+    from the original authurs.
+
+    Input:
+        filter_num (int): number of filters in use.
+        input: input data.
+        activation (fun): activation funtion in use.
+
+    '''
     x = Conv2D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
     x = activation(x)
     #x = BatchNormalization()(x)
@@ -44,6 +61,18 @@ def BN_block(filter_num, input, activation):
 
 
 def BN_block3d(filter_num, input, activation):
+    '''
+    Batch normilization block in 3D. The block consists of a conv-layers, activations
+    function and batch normilization in serial, two times. NOTE! batch normilization
+    was not used in the master thesis, and therefore is omitted. It's a reminant
+    from the original authurs.
+
+    Input:
+        filter_num (int): number of filters in use.
+        input: input data.
+        activation (fun): activation funtion in use.
+
+    '''
     x = Conv3D(filter_num, 3, padding='same', kernel_initializer='he_normal')(input)
     x = activation(x)
     #x = BatchNormalization()(x)
@@ -123,7 +152,9 @@ def D_concat_SE(filter_num, input3d, input2d, activation):
 
 
 def squeeze_excite_block(input, activation, ratio=16):
-    ''' Create a squeeze-excite block
+    '''
+    Create a squeeze-excite block.
+
     Args:
         input: input tensor
         filters: number of output filters
@@ -153,6 +184,21 @@ def main():
     print(model.summary())
 
 def D_Unet(pretrained_weights = None, input_size = (258,258,3,1), activation = 0, multiple = 32, dout = 0.5):
+    '''
+    Dimension fusion U-Net structure.
+
+    Input:
+        pretrained_weights: The pre-trained weights if any.
+        input_size (tuple of ints): size of input data (height, widht, channels, 1).
+        activation (fun): activation funtion, 0 = elu, 1 = RReLU.
+        multiple (int): number of filters in the first level of the network.
+        dout (float): Dropout level.
+
+    Output:
+        model: returns the model
+
+    '''
+
     keras.clear_session()
 
     if activation == 0:
