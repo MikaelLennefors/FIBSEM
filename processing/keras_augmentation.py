@@ -3,6 +3,13 @@ import random
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 def gen_aug(train_images, train_mask, maskgen_args, b_size):
+    
+    ###
+    # Input: Train images, train masks, generator arguments as in keras convention, batch size for how many augmentations to do at once
+    # Output: Generator object containing an iterator which generates augmented data when iterated over
+    # Generates a zipped iterable generator that can be looped over to produce augmented images.
+    ###
+    
     channels = np.shape(train_images)[3]
     img_datagen = ImageDataGenerator(**maskgen_args)
     seed = 132
