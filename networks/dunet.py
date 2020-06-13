@@ -20,8 +20,9 @@ import losses
 
 # DIMENSION-FUSION U-NET
 # ======================
-# link to github of authours: https://github.com/SZUHvern/D-UNet/blob/master/model.py
+# link to github of authors: https://github.com/SZUHvern/D-UNet/blob/master/model.py
 # link to article: https://arxiv.org/pdf/1908.05104.pdf
+# Slightly modified to accomodate for 3D-2D data
 
 def expand(x):
     x = keras.expand_dims(x, axis=-1)
