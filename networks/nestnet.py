@@ -11,9 +11,11 @@ from tensorflow.keras.activations import relu, elu
 import numpy as np
 import losses
 
-########################################
-# 2D Standard
-########################################
+# U-Net++
+# ======================
+# link to github of authors: https://github.com/MrGiovanni/UNetPlusPlus
+# link to article: https://arxiv.org/pdf/1807.10165.pdf
+# Slightly modified to accomodate for 3D-2D data
 
 def squeeze(x):
     x = keras.squeeze(x, axis=-1)
