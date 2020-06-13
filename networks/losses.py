@@ -3,6 +3,19 @@ from tensorflow.keras.layers import *
 import numpy as np
 
 def weighted_binary_crossentropy(y_true, y_pred, zero_weight = 0.31):
+    '''
+    Weighted Binary Cross-Entropy. Calculates the Weighted Binary Cross-Entropy
+    loss given a true label, a prediction and a weight for one of the classes.
+    Since it's a binary problem, the weight for the other class will be the
+    complement to the first.
+
+    Input:
+        y_true: true label matrix
+        y_pred: prediction matrix
+        zero_weight: weight for pores, default 0.31 since approx porosity
+    Output:
+        weighted_b_ce: weighted binary cross-entropy score tensor
+    '''
     one_weight = 1 - zero_weight
     b_ce = keras.binary_crossentropy(y_true, y_pred)
 
@@ -12,6 +25,19 @@ def weighted_binary_crossentropy(y_true, y_pred, zero_weight = 0.31):
     return weighted_b_ce
 
 def iou_loss(y_true, y_pred, smooth=1.):
+    '''
+    Intersection over union loss (IoU). Calculates the Intersection over union
+    loss given a true label, a prediction and a smooth-parameter.
+    Since it's a binary problem, the weight for the other class will be the
+    complement to the first.
+
+    Input:
+        y_true: true label matrix
+        y_pred: prediction matrix
+        smooth: in need to produce smooth gradients
+    Output:
+        jac: IoU score tensor
+    '''
     y_true_c = keras.flatten(y_true)
     y_pred_c = keras.flatten(y_pred)
     intersection = keras.sum(y_true_c * y_pred_c)
@@ -23,21 +49,34 @@ def iou_loss(y_true, y_pred, smooth=1.):
     # jac_c = (intersection + smooth) / (sum_c - intersection_c + smooth)
 
     return jac
-# Custom loss function
-def dice_coef(y_true, y_pred):
-    smooth = 1.
-    y_true_f = keras.flatten(y_true)
-    y_pred_f = keras.flatten(y_pred)
-    intersection = keras.sum(y_true_f * y_pred_f)
-    return (2. * intersection + smooth) / (keras.sum(y_true_f) + keras.sum(y_pred_f) + smooth)
+
 def bce_iou_loss(zero_weight):
+    '''
+    Weighted Binary Cross-Entropy mixed with IoU loss. Calculates the a mixed
+    Weighted Binary Cross-Entropy and IoU loss given a weight for one class.
+    Since it's a binary problem, the weight for the other class will be the
+    complement to the first.
+
+    Input:
+        y_true: true label matrix
+        y_pred: prediction matrix
+    Output:
+        bce_dice_loss: mixed score
+    '''
     def bce_dice_loss(y_true, y_pred):
         return 0.5 * weighted_binary_crossentropy(y_true, y_pred, zero_weight) - iou_loss(y_true, y_pred)
     return bce_dice_loss
 
 def iou_coef(y_true, y_pred):
-    # y_true_f = 1 - keras.flatten(y_true)
-    # y_pred_f = 1 - keras.flatten(y_pred)
+    '''
+    Intersection over union score (IoU). Calculates the a IoU loss given given a
+    true label and a prediction.
+
+    Input:
+        zero_weight: weight for pores.
+    Output:
+        IoU score tensor
+    '''
     y_true_f = keras.flatten(y_true)
     y_pred_f = keras.flatten(y_pred)
     intersection = keras.sum(y_true_f * y_pred_f)
@@ -83,36 +122,3 @@ class RReLU(Layer):
         config = {'l': self.l, 'u': self.u}
         base_config = super(RReLU, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
-
-def TP(y_true, y_pred):
-    y_true_f = keras.flatten(y_true)
-    y_pred_f = keras.flatten(y_pred)
-    y_pred_f01 = keras.round(keras.clip(y_pred_f, 0, 1))
-    true_positives = keras.sum(y_pred_f01*y_true_f)
-    return true_positives/65536
-
-def FP(y_true, y_pred):
-    y_true = 1 - y_true
-    y_true_f = keras.flatten(y_true)
-    y_pred_f = keras.flatten(y_pred)
-    y_pred_f01 = keras.round(keras.clip(y_pred_f, 0, 1))
-    false_positives = keras.sum(y_pred_f01*y_true_f)
-    return false_positives/65536
-
-def TN(y_true, y_pred):
-    y_true = 1 - y_true
-    y_pred = 1 - y_pred
-    y_true_f = keras.flatten(y_true)
-    y_pred_f = keras.flatten(y_pred)
-    y_pred_f01 = keras.round(keras.clip(y_pred_f, 0, 1))
-    true_negatives = keras.sum(y_pred_f01*y_true_f)
-    return true_negatives/65536
-
-
-def FN(y_true, y_pred):
-    y_pred = 1 - y_pred
-    y_true_f = keras.flatten(y_true)
-    y_pred_f = keras.flatten(y_pred)
-    tp_f01 = keras.round(keras.clip(y_pred_f, 0, 1))
-    false_negatives = keras.sum(y_true_f*tp_f01)
-    return false_negatives/65536
