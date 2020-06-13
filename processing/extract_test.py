@@ -4,10 +4,14 @@ import os
 load_path_test = '../data/test_data'
 
 def merge_data(path_to_data = '../data/train_val_data_384/', channels = 7):
-    #
-    # og_dir = os.listdir(path_to_data)
-    # og_dir.sort()
-
+    
+    ###
+    #Input: path to all data, number of channels
+    #Output: None, simply extracts test data into separate folder
+    # NOTE: Only run once, when all data is gathered in one folder. Extracts specific test data from a folder containing
+    # training, validation and test data.
+    ###
+    
     test_dir = os.listdir(load_path_test)
     test_dir.sort()
 
