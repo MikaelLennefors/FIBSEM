@@ -5,6 +5,11 @@ import itertools
 
 def extract_data(path, channels, standardize = False):
 
+    ###
+    # Input: path to data: string of absolute or relative path, number of channels: int in {1, 3, 5, 7} , standardize: Boolean to return standardized or normalized data
+    # Output: numpy array of extracted data dimensions (#files, shape_x, shape_y, channels, 1)
+    # Reads a directory containing data of porosities 22, 30 and 45%, can standardize data but most are reshapes to fit further input
+    ###
     og_dir = os.listdir(path)
     og_dir.sort()
 
