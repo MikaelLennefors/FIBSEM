@@ -7,6 +7,11 @@ from tensorflow.keras import backend as keras
 from tensorflow.keras.constraints import unit_norm, max_norm
 import losses
 
+# U-Net
+# ======================
+# link to article: https://arxiv.org/pdf/1505.04597.pdf
+# Slightly modified to accomodate for 3D-2D data
+
 def squeeze(x):
     x = keras.squeeze(x, axis=-1)
     return x
