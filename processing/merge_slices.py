@@ -10,6 +10,12 @@ save_path_merge_test = '../data/test_data_merged/'
 
 def merge_data(path_to_data = '../data/raw_data_no_mask/', channels = 7):
 
+    ### NOTE: Deprecated
+    # Input: path to data, number of channels
+    # Output: None, simply extracts the merged data into a folder
+    # Merges the number of channels together in order to create a 2D input for networks, is no longer in use but was an interesting idea
+    ###
+    
     og_dir = os.listdir(path_to_data)
     og_dir.sort()
 
