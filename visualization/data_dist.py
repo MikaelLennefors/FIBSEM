@@ -5,13 +5,23 @@ import matplotlib.pyplot as plt
 
 sys.path.insert(1, '../processing')
 from extract_data import extract_data
-
+#TODO: change data folders?
 data_path = '../data/train_val_data_border_clean/'
 test_path = '../data/test_data_border_clean/'
 
 sns.set(color_codes=True)
 
 def vis_data_dist(channels = 1):
+    '''
+    Visualization of intensity distributions between pores and background. Plots histograms
+    ans KDE-estimates of the distributions, together with mean and std.
+
+    Input:
+        channels (int): This is the channel number. It will always be 1 due to
+                        only having manual label for one image.
+    Output:
+        plot
+    '''
     images, masks = extract_data(data_path, channels)
     test_img, test_masks = extract_data(test_path, channels)
 
