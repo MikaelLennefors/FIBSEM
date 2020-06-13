@@ -2,6 +2,13 @@ import numpy as np
 import tensorflow as tf
 
 class PredictionCallback(tf.keras.callbacks.Callback):
+    '''
+    Creates prediction masks on validation data.
+
+    Output:
+        prediction masks
+        predicted porosity
+    '''
     def __init__(self, test_img):
         self.test_img = test_img
         self.predicted_prop = np.array([])

@@ -3,19 +3,20 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-# gpu = int(input("Choose GPU, 0 for Xp, 1 for V: "))
-#
-# if gpu == 0:
-#     path = '../results/Xp/'
-# else:
-#  	path = '../results/V/'
+'''
+    Produces parallel coordinates plot with Plotly. The user is asked for which
+    network shouuld be plotted and how many channels that are used in that case.
+
+    Output:
+        interactive html file 
+'''
+
 path = '../results/hyper_opt/'
 
 network = input('Choose network, unet, dunet, multi, nesnet: ')
 path = path  + network + '_'
 channels = int(input('Number of channels: '))
 path = path + str(channels)+ '_channels.csv'
-# path = path + str(channels)+ '_good.csv'
 result = pd.read_csv(path, sep=",", usecols=(2, 3, 4, 5, 6, 7, 8, 9))# , header=None
 
 count = 0
@@ -28,25 +29,17 @@ for val in result['Pre processing']:
         result.at[count, 'Pre processing'] = 2
     count = count + 1
 count = 0
-print(result['Whitening'])
+
 for val in result['Whitening']:
     if val !=0:
         result.at[count, 'Whitening'] = -1*np.log10(val)
     count = count + 1
-# raise
+
 result['Pre processing'] = result['Pre processing'].astype(int)
 result['Filters'] = np.log2(result['Filters'])
 result['Learning rate'] = -1*np.log10(result['Learning rate'])
-print(result['Whitening'])
 
-# result['Whitening'] = -1*np.log10(result['Whitening'])
-print(result['Whitening'])
-# raise
 
-# test = 'prut ' + result['Learning rate'].astype(str)
-# test = list(test)
-# print(test.type)
-# raise
 maxIoU = np.max(result['Mean IoU'])
 minIoU = np.min(result['Mean IoU'])
 fig = go.Figure(data=
@@ -86,4 +79,3 @@ fig.update_layout(
         'xanchor': 'center',
         'yanchor': 'top'})
 fig.show()
-# 'text': "Hyperparameter space for " + network,
