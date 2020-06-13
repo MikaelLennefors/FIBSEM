@@ -8,6 +8,12 @@ from tensorflow.keras.utils import plot_model
 from tensorflow.keras import backend as keras
 import losses
 
+# MultiResU-Net
+# ======================
+# link to github of authors: https://github.com/nibtehaz/MultiResUNet
+# link to article: https://arxiv.org/pdf/1902.04049.pdf
+# Slightly modified to accomodate for 3D-2D data
+
 def squeeze(x):
     x = keras.squeeze(x, axis=-1)
     return x
