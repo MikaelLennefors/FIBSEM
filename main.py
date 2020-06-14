@@ -8,6 +8,8 @@ import tabulate
 import pandas as pd
 import time
 import cv2
+
+# Stop tensorflow from printing every unnecessary message
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 
@@ -43,6 +45,9 @@ sys.path.insert(1, './visualization')
 from keras_callbacks import PredictionCallback
 from exit_print import exit_print
 
+
+# Default settings:
+# Channels = 1, gpu = Xp, network = unet
 channels = 1
 
 gpu = 'Xp'
@@ -80,14 +85,15 @@ train_path = './data/magnus_data/train/'
 val_path = './data/magnus_data/val/'
 test_path = './data/magnus_data/test/'
 
-log_path = './results/{}/log.out/'.format(gpu) #TODO Old from tensorboard
+log_path = './results/{}/log.out/'.format(gpu)
 weights_path = './results/{}/weights/'.format(gpu)
 pred_path = './results/{}/masks/'.format(gpu)
 callback_path = './results/{}/callback_masks/'.format(gpu)
 
+#maximum hours of training
 max_hours = 48
 
-#TODO WILL WE HA PARAMTERS SÅ HÄR?
+#how many patches to split into, 0 -> none, 1 -> 4
 grid_split = 0
 grid_split = 2**grid_split
 
@@ -146,6 +152,8 @@ v_img = []
 v_img_standardized = []
 v_mask = []
 
+# Split the data into grids if option is enabled. Also reshape to fit coming methods
+# Previously used to split the data, but now we have a stationary split done above
 for i in range(k_fold):
     # train_images, train_masks, val_images, val_masks = gen_data_split(images, masks, random_seed = i)
     # train_images_standardized, train_masks, val_images_standardized, val_masks = gen_data_split(images_standardized, masks, random_seed = i)
@@ -199,6 +207,12 @@ v_img = np.array(v_img)
 iteration_count = 0
 
 def evaluate_network(parameters):
+    
+    ###
+    # Input: dict of dicts containing each parameter and the respective ranges to be tuned
+    # Output: mean benchmark of IoU
+    # Main method to evaluate the network performance, can be used for tuning or testing.
+    ###
     k_fold_count = 0
     global iteration_count
     global test_images
@@ -264,7 +278,7 @@ def evaluate_network(parameters):
         # callbacks_list = [earlystopping1, earlystopping2, PredictionCallback(test_img, test_mask, callback_path)]
 
         count = 0
-
+        # Loop to contain how many data augmentation steps should be done
         for c in train:
             y = np.array(c[-1])
             x = []
@@ -279,6 +293,8 @@ def evaluate_network(parameters):
                 x = x / max_intensity
             elif preproc['type'] == 'ZCA':
                 x = zca_whitening(x, preproc['whitening'])
+                
+            #Elastic deformation
             if prop_elastic > 0:
                 for j in range(np.shape(x)[0]):
                     if random.random() < prop_elastic:
@@ -299,7 +315,7 @@ def evaluate_network(parameters):
 
             # if time.time() > end_time:
             #     raise KeyboardInterrupt
-            # print("hi")
+            
             results = m.fit(x, y, verbose = 2, batch_size = b_size, epochs=NO_OF_EPOCHS, validation_data=(validation_img, validation_mask), callbacks = callbacks_list)
 
             metric_dict['iou_coef'][str(k_fold_count)].extend(results.history['iou_coef'])
@@ -362,6 +378,7 @@ def evaluate_network(parameters):
 N_FOLDS = 10
 MAX_EVALS = 500
 def main():
+    #all parameters gathered from the hyperparameter optimization
     parameters = {'unet': {'net_drop': 0.4,
                   'net_filters': 64,
                   'net_lr': 6.4e-5,
@@ -454,6 +471,11 @@ def main():
 
 
 if __name__ == '__main__':
+    # If ctrl-C -> print results up to this point
+    # Format of input should be $python3.7 main.py 'gpu' 'channels' 'network'
+    # 'gpu' is in {0: 'Xp', 1: 'V'}
+    # 'channels' is in {1, 3, 5, 7}
+    # 'network' is in {0: 'unet', 1: 'dunet', 2: 'multiresunet', 3: 'nestnet' (unet++)}
     try:
         main()
     except KeyboardInterrupt:
